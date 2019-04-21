@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_action.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_action.xml"
+    },
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_action_tombstone.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_action_tombstone.xml"
+    },
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_template_icon_group.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_template_icon_group.xml"
+    },
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_template_part_time.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_template_part_time.xml"
+    },
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_template_part_chronometer.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_template_part_chronometer.xml"
+    },
+    {
+        "merged": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\layout\\notification_template_custom_big.xml",
+        "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\layout\\notification_template_custom_big.xml"
+    }
+]

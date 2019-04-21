@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2142fa</color>
+    <color name="colorPrimaryDark">#0027ff</color>
+    <color name="colorAccent">#3F51B5</color>
+
+    <!--按钮-->
+    <color name="pdf_bg">#fafafa</color>
+    <color name="pdf_btn_white">#fafafa</color>
+    <color name="pdf_btn_press_white">#b4f8fa</color>
+
+    <color name="textBlack">#444</color>
+</resources>

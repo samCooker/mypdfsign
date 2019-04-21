@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\incremental\\mergeDebugResources\\merged.dir\\values-iw\\values-iw.xml",
+            "map": [
+                {
+                    "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\values-iw\\values-iw.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "102",
+                        "endOffsets": "153"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "F:\\project_android_as\\MyPdfSign\\signature-pad\\build\\intermediates\\res\\merged\\debug\\values-iw\\values-iw.xml",
+            "map": [
+                {
+                    "source": "E:\\workspaceCache\\.gradle\\daemon\\caches\\transforms-1\\files-1.1\\support-compat-26.1.0.aar\\2e558ae61cef39c56628be9cc405b145\\res\\values-iw\\values-iw.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "102",
+                        "endOffsets": "153"
+                    }
+                }
+            ]
+        }
+    ]
+}
