@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -131,7 +132,11 @@ public class MainActivity extends AppCompatActivity {
                 //水平翻页，
                 float offsetX = -pdfView.getCurrentXOffset()-(pdfView.getCurrentPage()*pdfView.getWidth());
 
-                SavePdfUtil.insertImage(filePath,outPath,signaturePad.getTransparentSignatureBitmap(),pdfView.getCurrentPage()+1,pdfView.getZoom(),offsetX,-pdfView.getCurrentYOffset());
+                DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+                Log.d("signaturePad","displayMetrics:"+displayMetrics.density);
+                Log.d("signaturePad","displayMetrics:"+displayMetrics.widthPixels);
+
+                SavePdfUtil.insertImage(filePath,outPath,signaturePad.getTransparentSignatureBitmap(),pdfView.getCurrentPage()+1,pdfView.getZoom(),offsetX,-pdfView.getCurrentYOffset(),displayMetrics.density);
 
                 File file = new File(outPath);
                 Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -197,6 +202,6 @@ public class MainActivity extends AppCompatActivity {
                 .scrollHandle(null)
                 .spacing(0)
                 .autoSpacing(false)
-                .pageFitPolicy(FitPolicy.WIDTH).load();
+                .pageFitPolicy(FitPolicy.HEIGHT).load();
     }
 }

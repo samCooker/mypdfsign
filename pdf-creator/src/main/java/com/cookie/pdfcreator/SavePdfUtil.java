@@ -19,7 +19,7 @@ import java.io.*;
 
 public class SavePdfUtil {
 
-    public static void insertImage(String pdfPath, String outputPath, Bitmap bitmap,int pageNo,float zoom,float x,float y) {
+    public static void insertImage(String pdfPath, String outputPath, Bitmap bitmap, int pageNo, float zoom, float x, float y, float density) {
         try {
 
             byte[] imageByte = bitmap2Bytes(bitmap);
@@ -31,8 +31,9 @@ public class SavePdfUtil {
             Image img = Image.getInstance(imageByte);
             Rectangle rectangle = reader.getPageSize(pageNo);
             //相对于左下角 缩小
-            img.scaleAbsolute(rectangle.getWidth()/zoom,rectangle.getHeight()/zoom);
+            img.scaleAbsolute(bitmap.getWidth()*rectangle.getHeight()/bitmap.getHeight()/zoom,rectangle.getHeight()/zoom);
             img.setAbsolutePosition(x/zoom*(rectangle.getWidth()/bitmap.getWidth()),((bitmap.getHeight()*zoom-y-bitmap.getHeight())/zoom)*(rectangle.getHeight()/bitmap.getHeight()));
+
 
             Log.d("signaturePad","zoom:"+zoom);
             Log.d("signaturePad","x:"+x);
