@@ -7,7 +7,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 26
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -20,11 +20,6 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:26.1.0'
-    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
-    //浮动按钮
-    implementation 'com.getbase:floatingactionbutton:1.10.1'
-    implementation project(':android-pdf-viewer')
-    implementation project(':signature-pad')
-    implementation project(':pdf-creator')
+
+    implementation project(':pdf-operation')
 }

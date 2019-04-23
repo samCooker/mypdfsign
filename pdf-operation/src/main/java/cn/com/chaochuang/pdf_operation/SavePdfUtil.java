@@ -1,4 +1,4 @@
-package com.cookie.pdfcreator;
+package cn.com.chaochuang.pdf_operation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
@@ -19,7 +19,7 @@ import java.io.*;
 
 public class SavePdfUtil {
 
-    public static void insertImage(String pdfPath, String outputPath, Bitmap bitmap, int pageNo, float zoom, float x, float y, float density) {
+    public static void insertImage(String pdfPath, String outputPath, Bitmap bitmap, int pageNo, float zoom, float x, float y) {
         try {
 
             byte[] imageByte = bitmap2Bytes(bitmap);
@@ -30,12 +30,13 @@ public class SavePdfUtil {
             PdfContentByte over = stamp.getOverContent(pageNo);
             Image img = Image.getInstance(imageByte);
             Rectangle rectangle = reader.getPageSize(pageNo);
+            float radio = rectangle.getHeight()/bitmap.getHeight();
             //相对于左下角 缩小
-            img.scaleAbsolute(bitmap.getWidth()*rectangle.getHeight()/bitmap.getHeight()/zoom,rectangle.getHeight()/zoom);
-            img.setAbsolutePosition(x/zoom*(rectangle.getWidth()/bitmap.getWidth()),((bitmap.getHeight()*zoom-y-bitmap.getHeight())/zoom)*(rectangle.getHeight()/bitmap.getHeight()));
+            img.scaleAbsolute(bitmap.getWidth()*radio/zoom ,rectangle.getHeight()/zoom);
+            img.setAbsolutePosition(x*radio/zoom,((bitmap.getHeight()*zoom-y-bitmap.getHeight())/zoom)*radio);
 
 
-            Log.d("signaturePad","zoom:"+zoom);
+            Log.d("signaturePad","zoom:"+ (bitmap.getWidth() - rectangle.getWidth()/radio));
             Log.d("signaturePad","x:"+x);
             Log.d("signaturePad","y:"+y);
             Log.d("signaturePad","rectangle w:"+rectangle.getWidth());
