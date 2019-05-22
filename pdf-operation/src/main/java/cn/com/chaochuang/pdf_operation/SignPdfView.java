@@ -1,19 +1,22 @@
 package cn.com.chaochuang.pdf_operation;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import com.getbase.floatingactionbutton.FloatingActionButton;
@@ -34,6 +37,8 @@ import java.util.List;
 
 public class SignPdfView extends AppCompatActivity {
 
+    private ProgressDialog progressDialog;
+
     private PDFView pdfView;
     private RelativeLayout rlPdfView;
     private View signView;
@@ -41,6 +46,7 @@ public class SignPdfView extends AppCompatActivity {
     private FloatingActionsMenu actionsMenu;
     private FloatingActionButton handWriteItem,closeViewItem;
     private String filePath;
+    private int currentPage;
 
     /**
      * 手写批注菜单按钮
@@ -59,7 +65,10 @@ public class SignPdfView extends AppCompatActivity {
 
         pdfView = findViewById(R.id.pdf_view);
         rlPdfView = findViewById(R.id.rl_pdf_view);
-
+        //加载提示框
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("正在加载");
+        progressDialog.setCancelable(true);
         this.initMenuBtn();
 
         //获取权限
@@ -136,6 +145,7 @@ public class SignPdfView extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 signaturePad.setVisibility(View.INVISIBLE);
+                showActionBtns();
             }
         });
         //endregion
@@ -151,33 +161,16 @@ public class SignPdfView extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
-                String outPath =Environment.getExternalStorageDirectory().getPath()+"/签名.pdf";
+                showProgressDialog();
+                String outPath =Environment.getExternalStorageDirectory().getPath()+"/签名"+System.currentTimeMillis()+".pdf";
                 //水平翻页，
                 float offsetX = -pdfView.getCurrentXOffset()-(pdfView.getCurrentPage()*pdfView.getWidth());
+                currentPage = pdfView.getCurrentPage()+1;
+                SavePdfUtil.insertImage(filePath,outPath,signaturePad.getTransparentSignatureBitmap(),currentPage,pdfView.getZoom(),offsetX,-pdfView.getCurrentYOffset());
 
-                SavePdfUtil.insertImage(filePath,outPath,signaturePad.getTransparentSignatureBitmap(),pdfView.getCurrentPage()+1,pdfView.getZoom(),offsetX,-pdfView.getCurrentYOffset());
-
-                File file = new File(outPath);
-                final Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                Uri uri;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    //判断版本是否在7.0以上
-                    uri = FileProvider.getUriForFile(SignPdfView.this, SignPdfView.this.getPackageName() + ".provider", file);
-                    //添加这一句表示对目标应用临时授权该Uri所代表的文件
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NO_HISTORY);
-
-                } else {
-                    uri = Uri.fromFile(file);
-                }
-
-                intent.setDataAndType(uri,"application/pdf");
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        startActivity(intent);
-                    }
-                });
+                filePath = outPath;
+                openPdfFile();
+                hideProgressDialog();
             }
         });
         //endregion
@@ -191,6 +184,7 @@ public class SignPdfView extends AppCompatActivity {
         btnUndo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                signaturePad.undo();
             }
         });
         //endregion
@@ -204,6 +198,7 @@ public class SignPdfView extends AppCompatActivity {
         btnRedo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                signaturePad.redo();
             }
         });
         //endregion
@@ -217,7 +212,23 @@ public class SignPdfView extends AppCompatActivity {
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this, R.style.Theme_AppCompat_Light_Dialog_Alert_EinkSign);
+                builder.setMessage("是否清空");
+                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
 
+                    }
+                });
+                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        signaturePad.clear();
+                    }
+                });
+                Dialog dialog = builder.create();
+                dialog.setCancelable(true);
+                dialog.show();
             }
         });
         //endregion
@@ -243,6 +254,10 @@ public class SignPdfView extends AppCompatActivity {
      * 手写画布
      */
     private void showSignView() {
+        if(signaturePad!=null){
+            signaturePad.setVisibility(View.VISIBLE);
+            return;
+        }
         LayoutInflater inflater = LayoutInflater.from(this);
         signView = inflater.inflate(R.layout.sign_view,rlPdfView,false);
 
@@ -256,10 +271,6 @@ public class SignPdfView extends AppCompatActivity {
         signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
             @Override
             public void onStartSigning() {
-                if (signaturePad.getPoints() != null && signaturePad.getPoints().size() > 0) {
-                    //TimedPoint timedPoint = signaturePad.getPoints().get(0);
-                    //Log.d("signaturePad", timedPoint.x + ":" + timedPoint.y);
-                }
 
             }
 
@@ -272,6 +283,7 @@ public class SignPdfView extends AppCompatActivity {
 
             }
         });
+
     }
 
     /**
@@ -286,23 +298,15 @@ public class SignPdfView extends AppCompatActivity {
 
     public void openPdfFile(){
         pdfView.fromFile(new File(filePath))
-                .defaultPage(0)
-                .swipeHorizontal(false)
+                .defaultPage(currentPage-1)
+                .swipeHorizontal(true)
                 .pageSnap(true)
                 .pageFling(true)
                 .enableAnnotationRendering(true)
                 .scrollHandle(null)
                 .spacing(0)
                 .autoSpacing(true)
-                .pageFitPolicy(FitPolicy.HEIGHT).load();
-    }
-
-    /**
-     * 显示主菜单按钮
-     */
-    private void addActionBtns(){
-        actionsMenu.addButton(handWriteItem);
-        actionsMenu.addButton(closeViewItem);
+                .pageFitPolicy(FitPolicy.WIDTH).load();
     }
 
     /**
@@ -311,6 +315,20 @@ public class SignPdfView extends AppCompatActivity {
     private void showHandWriteBtns() {
         removeActionBtns();
         addHandWriteBtns();
+    }
+
+    private void showActionBtns(){
+        removeHandWriteBtns();
+        addActionBtns();
+    }
+
+
+    /**
+     * 显示主菜单按钮
+     */
+    private void addActionBtns(){
+        actionsMenu.addButton(handWriteItem);
+        actionsMenu.addButton(closeViewItem);
     }
 
     /**
@@ -331,5 +349,24 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.addButton(btnRedo);
         actionsMenu.addButton(btnClear);
         actionsMenu.addButton(btnClose);
+    }
+    private void removeHandWriteBtns(){
+        actionsMenu.removeButton(btnSave);
+        actionsMenu.removeButton(btnPen);
+        actionsMenu.removeButton(btnUndo);
+        actionsMenu.removeButton(btnRedo);
+        actionsMenu.removeButton(btnClear);
+        actionsMenu.removeButton(btnClose);
+    }
+
+    private void showProgressDialog(){
+        if(progressDialog!=null){
+            progressDialog.show();
+        }
+    }
+    private void hideProgressDialog(){
+        if(progressDialog!=null){
+            progressDialog.hide();
+        }
     }
 }

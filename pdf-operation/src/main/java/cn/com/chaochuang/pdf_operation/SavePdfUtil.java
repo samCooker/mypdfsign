@@ -22,6 +22,9 @@ public class SavePdfUtil {
     public static void insertImage(String pdfPath, String outputPath, Bitmap bitmap, int pageNo, float zoom, float x, float y) {
         try {
 
+            Log.d("signaturePad","x:"+x);
+            Log.d("signaturePad","y:"+y);
+
             byte[] imageByte = bitmap2Bytes(bitmap);
 
             PdfReader reader = new PdfReader(pdfPath);///打开要写入的PDF
@@ -30,15 +33,13 @@ public class SavePdfUtil {
             PdfContentByte over = stamp.getOverContent(pageNo);
             Image img = Image.getInstance(imageByte);
             Rectangle rectangle = reader.getPageSize(pageNo);
-            float radio = rectangle.getHeight()/bitmap.getHeight();
+            float radio = rectangle.getWidth()/bitmap.getWidth();
             //相对于左下角 缩小
-            img.scaleAbsolute(bitmap.getWidth()*radio/zoom ,rectangle.getHeight()/zoom);
-            img.setAbsolutePosition(x*radio/zoom,((bitmap.getHeight()*zoom-y-bitmap.getHeight())/zoom)*radio);
+            img.scaleAbsolute(bitmap.getWidth()*radio/zoom ,bitmap.getHeight()*radio/zoom);
+            //每页pdf的坐标原点在左下角，屏幕的坐标原点在左上角（x,y是相对于左上角的坐标值）
+            img.setAbsolutePosition(x*radio/zoom,(rectangle.getHeight()/radio*zoom-y-bitmap.getHeight()*zoom)*radio);
 
-
-            Log.d("signaturePad","zoom:"+ (bitmap.getWidth() - rectangle.getWidth()/radio));
-            Log.d("signaturePad","x:"+x);
-            Log.d("signaturePad","y:"+y);
+            Log.d("signaturePad","pageNo:"+ pageNo);
             Log.d("signaturePad","rectangle w:"+rectangle.getWidth());
             Log.d("signaturePad","rectangle h:"+rectangle.getHeight());
             Log.d("signaturePad","bitmap w:"+bitmap.getWidth());

@@ -12,7 +12,9 @@
             android:background="@color/textBlack"
             android:id="@+id/pdf_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent" >
+    </com.github.barteksc.pdfviewer.PDFView>
+
 
     <com.getbase.floatingactionbutton.FloatingActionsMenu
             android:id="@+id/action_menu"
