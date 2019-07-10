@@ -9,21 +9,16 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
-import com.github.gcacace.signaturepad.views.SignaturePad;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -37,12 +32,11 @@ import java.util.List;
 
 public class SignPdfView extends AppCompatActivity {
 
+    private static final String TAG = SignPdfView.class.getSimpleName();
+
     private ProgressDialog progressDialog;
 
     private PDFView pdfView;
-    private RelativeLayout rlPdfView;
-    private View signView;
-    private SignaturePad signaturePad;
     private FloatingActionsMenu actionsMenu;
     private FloatingActionButton handWriteItem,closeViewItem;
     private String filePath;
@@ -64,7 +58,6 @@ public class SignPdfView extends AppCompatActivity {
         this.initParams();
 
         pdfView = findViewById(R.id.pdf_view);
-        rlPdfView = findViewById(R.id.rl_pdf_view);
         //加载提示框
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
@@ -112,7 +105,7 @@ public class SignPdfView extends AppCompatActivity {
         handWriteItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showSignView();
+                pdfView.showSignView();
                 showHandWriteBtns();
             }
         });
@@ -127,6 +120,7 @@ public class SignPdfView extends AppCompatActivity {
         closeViewItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                finish();
             }
         });
         //endregion
@@ -144,7 +138,7 @@ public class SignPdfView extends AppCompatActivity {
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                signaturePad.setVisibility(View.INVISIBLE);
+                pdfView.hideSignView();
                 showActionBtns();
             }
         });
@@ -158,19 +152,9 @@ public class SignPdfView extends AppCompatActivity {
         btnSave.setColorNormalResId(R.color.pdf_btn_white);
         btnSave.setColorPressedResId(R.color.pdf_btn_press_white);
         btnSave.setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
-                showProgressDialog();
-                String outPath =Environment.getExternalStorageDirectory().getPath()+"/签名"+System.currentTimeMillis()+".pdf";
-                //水平翻页，
-                float offsetX = -pdfView.getCurrentXOffset()-(pdfView.getCurrentPage()*pdfView.getWidth());
-                currentPage = pdfView.getCurrentPage()+1;
-                SavePdfUtil.insertImage(filePath,outPath,signaturePad.getTransparentSignatureBitmap(),currentPage,pdfView.getZoom(),offsetX,-pdfView.getCurrentYOffset());
-
-                filePath = outPath;
-                openPdfFile();
-                hideProgressDialog();
+                pdfView.insertSignImages();
             }
         });
         //endregion
@@ -184,7 +168,7 @@ public class SignPdfView extends AppCompatActivity {
         btnUndo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                signaturePad.undo();
+                pdfView.signUndo();
             }
         });
         //endregion
@@ -198,7 +182,7 @@ public class SignPdfView extends AppCompatActivity {
         btnRedo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                signaturePad.redo();
+                pdfView.signRedo();
             }
         });
         //endregion
@@ -223,7 +207,7 @@ public class SignPdfView extends AppCompatActivity {
                 builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        signaturePad.clear();
+                        pdfView.signClear();
                     }
                 });
                 Dialog dialog = builder.create();
@@ -247,42 +231,6 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         addActionBtns();
-
-    }
-
-    /**
-     * 手写画布
-     */
-    private void showSignView() {
-        if(signaturePad!=null){
-            signaturePad.setVisibility(View.VISIBLE);
-            return;
-        }
-        LayoutInflater inflater = LayoutInflater.from(this);
-        signView = inflater.inflate(R.layout.sign_view,rlPdfView,false);
-
-        SignaturePad _padView = rlPdfView.findViewById(R.id.signature_pad);
-        if(_padView==null) {
-            rlPdfView.addView(signView,1);
-        }
-        signaturePad = signView.findViewById(R.id.signature_pad);
-        signaturePad.setMinWidth(1.6f);
-        signaturePad.setMaxWidth(2.6f);
-        signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
-            @Override
-            public void onStartSigning() {
-
-            }
-
-            @Override
-            public void onSigned() {
-            }
-
-            @Override
-            public void onClear() {
-
-            }
-        });
 
     }
 

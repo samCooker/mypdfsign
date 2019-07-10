@@ -16,23 +16,20 @@
 package com.github.barteksc.pdfviewer;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.graphics.Paint;
+import android.graphics.*;
 import android.graphics.Paint.Style;
-import android.graphics.PaintFlagsDrawFilter;
-import android.graphics.PointF;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
@@ -61,12 +58,14 @@ import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.github.barteksc.pdfviewer.util.MathUtils;
 import com.github.barteksc.pdfviewer.util.SnapEdge;
 import com.github.barteksc.pdfviewer.util.Util;
+import com.github.gcacace.signaturepad.views.SignaturePad;
 import com.shockwave.pdfium.PdfDocument;
 import com.shockwave.pdfium.PdfiumCore;
 import com.shockwave.pdfium.util.Size;
 import com.shockwave.pdfium.util.SizeF;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,7 +121,7 @@ public class PDFView extends RelativeLayout {
     /** Drag manager manage all touch events */
     private DragPinchManager dragPinchManager;
 
-    PdfFile pdfFile;
+    public PdfFile pdfFile;
 
     /** The index of the current sequence */
     private int currentPage;
@@ -586,6 +585,7 @@ public class PDFView extends RelativeLayout {
         // Moves the canvas before drawing any element
         float currentXOffset = this.currentXOffset;
         float currentYOffset = this.currentYOffset;
+        Log.d(TAG,"currentXOffset:"+currentXOffset+"--currentYOffset"+currentYOffset);
         canvas.translate(currentXOffset, currentYOffset);
 
         // Draws thumbnails
@@ -608,6 +608,7 @@ public class PDFView extends RelativeLayout {
         }
         onDrawPagesNums.clear();
 
+        //定义的回调方法
         drawWithListener(canvas, currentPage, callbacks.getOnDraw());
 
         // Restores the canvas position
@@ -791,6 +792,12 @@ public class PDFView extends RelativeLayout {
      * @param moveHandle whether to move scroll handle or not
      */
     public void moveTo(float offsetX, float offsetY, boolean moveHandle) {
+
+        if(signaturePad!=null&&signaturePad.getVisibility() == VISIBLE){
+            //已显示签批图层，则不滑动
+            return;
+        }
+
         if (swipeVertical) {
             // Check X offset
             float scaledPageWidth = toCurrentScale(pdfFile.getMaxPageWidth());
@@ -1506,6 +1513,88 @@ public class PDFView extends RelativeLayout {
             } else {
                 PDFView.this.load(documentSource, password);
             }
+        }
+    }
+
+    /**
+     * -------新增的属性和方法--------
+     */
+
+    private SignaturePad signaturePad;
+
+    /**
+     * （新添加方法） 显示签批图层
+     */
+    public void showSignView(){
+
+        LayoutInflater inflater = LayoutInflater.from(this.getContext());
+        View signView = inflater.inflate(R.layout.sign_view,this,false);
+
+        LayoutParams layoutParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+        SizeF size = pdfFile.getPageSize(currentPage);
+        layoutParams.width = (int) toCurrentScale(size.getWidth());
+        layoutParams.height = (int) toCurrentScale(size.getHeight());
+
+        signView.setLayoutParams(layoutParams);
+
+        layoutParams.addRule(CENTER_IN_PARENT);
+
+        if(signaturePad!=null){
+            signaturePad.setVisibility(View.VISIBLE);
+        }else{
+            this.addView(signView);
+            signaturePad = signView.findViewById(R.id.signature_pad);
+            signaturePad.setMinWidth(1.6f);
+            signaturePad.setMaxWidth(2.6f);
+            signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
+                @Override
+                public void onStartSigning() {
+
+                }
+
+                @Override
+                public void onSigned() {
+                }
+
+                @Override
+                public void onClear() {
+
+                }
+            });
+        }
+    }
+
+    public void hideSignView(){
+        if(signaturePad!=null){
+            signaturePad.setVisibility(INVISIBLE);
+        }
+    }
+
+    public void signUndo(){
+        if(signaturePad!=null){
+            signaturePad.undo();
+        }
+    }
+
+    public void signRedo(){
+        if(signaturePad!=null){
+            signaturePad.redo();
+        }
+    }
+
+    public void signClear(){
+        if(signaturePad!=null){
+            signaturePad.clear();
+        }
+    }
+
+    public void insertSignImages(){
+        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/touxiang.jpg";
+        try {
+            pdfFile.insertSignImage(new File(filePath));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
     }
 }

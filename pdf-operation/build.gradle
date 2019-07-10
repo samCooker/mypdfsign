@@ -36,6 +36,5 @@ dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     //浮动按钮
     implementation 'com.getbase:floatingactionbutton:1.10.1'
-    implementation project(':android-pdf-viewer')
-    implementation project(':signature-pad')
+    api project(path: ':android-pdf-viewer')
 }

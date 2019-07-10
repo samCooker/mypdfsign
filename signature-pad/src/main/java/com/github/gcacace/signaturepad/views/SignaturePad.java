@@ -7,12 +7,16 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import com.github.gcacace.signaturepad.R;
 
 
 public class SignaturePad extends View {
+
+    private static final String TAG = SignaturePad.class.getSimpleName();
+
     //View state
     private boolean mIsEmpty;
 
@@ -205,6 +209,9 @@ public class SignaturePad extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+
+                Log.d(TAG,"X:"+event.getX()+" Y:"+event.getY());
+
                 getParent().requestDisallowInterceptTouchEvent(true);
                 sketchBoard.begin(event);
                 if (mOnSignedListener != null) {

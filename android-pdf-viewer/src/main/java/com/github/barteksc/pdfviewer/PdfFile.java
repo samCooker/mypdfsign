@@ -18,6 +18,7 @@ package com.github.barteksc.pdfviewer;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.ParcelFileDescriptor;
 import android.util.SparseBooleanArray;
 
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
@@ -28,6 +29,8 @@ import com.shockwave.pdfium.PdfiumCore;
 import com.shockwave.pdfium.util.Size;
 import com.shockwave.pdfium.util.SizeF;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -363,5 +366,18 @@ class PdfFile {
         }
 
         return documentPage;
+    }
+
+    public int getPageWidth(int page){
+        return pdfiumCore.getPageWidth(pdfDocument,page);
+    }
+
+    public int getPageHeight(int page){
+        return pdfiumCore.getPageHeight(pdfDocument,page);
+    }
+
+    public void insertSignImage(File file) throws FileNotFoundException {
+        ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+        pdfiumCore.insertImage(pfd,pdfDocument);
     }
 }
