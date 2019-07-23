@@ -376,8 +376,11 @@ class PdfFile {
         return pdfiumCore.getPageHeight(pdfDocument,page);
     }
 
-    public void insertSignImage(File file) throws FileNotFoundException {
-        ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
-        pdfiumCore.insertImage(pfd,pdfDocument);
+    public int getPageWidthPoint(int page){
+        return pdfiumCore.getPageWidthPoint(pdfDocument,page);
+    }
+
+    public int getPageHeightPoint(int page){
+        return pdfiumCore.getPageHeightPoint(pdfDocument,page);
     }
 }

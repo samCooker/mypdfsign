@@ -52,8 +52,9 @@ buildscript {
 dependencies {
     api fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:support-compat:26.1.0'
-    implementation project(path: ':PdfiumAndroid')
+
     implementation project(path: ':signature-pad')
+    implementation files('libs\\PdfiumAndroid-release.aar')
 
 }
 

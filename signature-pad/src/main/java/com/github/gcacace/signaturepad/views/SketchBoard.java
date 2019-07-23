@@ -193,6 +193,7 @@ public class SketchBoard {
             // correspond to thinner strokes.
             float newWidth = strokeWidth(velocity);
 
+            Log.d("board","strokeWidth:"+newWidth);
             // The Bezier's width starts out as last curve's final width, and
             // gradually changes to the stroke width just calculated. The new
             // width calculation is based on the velocity between the Bezier's

@@ -36,6 +36,10 @@ public class SignaturePad extends View {
 
     //新增
     private boolean penOnly = false;
+    private int xMin = 0,
+            xMax = 0,
+            yMin = 0,
+            yMax = 0;
 
     public SignaturePad(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -210,8 +214,6 @@ public class SignaturePad extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
 
-                Log.d(TAG,"X:"+event.getX()+" Y:"+event.getY());
-
                 getParent().requestDisallowInterceptTouchEvent(true);
                 sketchBoard.begin(event);
                 if (mOnSignedListener != null) {
@@ -295,10 +297,6 @@ public class SignaturePad extends View {
 
         int backgroundColor = Color.TRANSPARENT;
 
-        int xMin = Integer.MAX_VALUE,
-                xMax = Integer.MIN_VALUE,
-                yMin = Integer.MAX_VALUE,
-                yMax = Integer.MIN_VALUE;
 
         boolean foundPixel = false;
 
@@ -362,8 +360,23 @@ public class SignaturePad extends View {
             if (stop)
                 break;
         }
-
         return Bitmap.createBitmap(mSignatureBitmap, xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    public int getxMin() {
+        return xMin;
+    }
+
+    public int getyMin() {
+        return yMin;
+    }
+
+    public int getyMax() {
+        return yMax;
+    }
+
+    public int getxMax() {
+        return xMax;
     }
 
     /**

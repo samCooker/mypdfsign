@@ -20,6 +20,7 @@ import android.content.Context;
 import com.shockwave.pdfium.PdfDocument;
 import com.shockwave.pdfium.PdfiumCore;
 
+import java.io.File;
 import java.io.IOException;
 
 public interface DocumentSource {

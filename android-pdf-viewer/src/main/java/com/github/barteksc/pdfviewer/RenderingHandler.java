@@ -16,7 +16,6 @@
 package com.github.barteksc.pdfviewer;
 
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -30,7 +29,7 @@ import com.github.barteksc.pdfviewer.model.PagePart;
 
 /**
  * A {@link Handler} that will process incoming {@link RenderingTask} messages
- * and alert {@link PDFView#onBitmapRendered(PagePart)} when the portion of the
+ * and alert {@link PDFView#addHandwritingData(PagePart)} when the portion of the
  * PDF is ready to render.
  */
 class RenderingHandler extends Handler {
@@ -69,7 +68,7 @@ class RenderingHandler extends Handler {
                     pdfView.post(new Runnable() {
                         @Override
                         public void run() {
-                            pdfView.onBitmapRendered(part);
+                            pdfView.addHandwritingData(part);
                         }
                     });
                 } else {

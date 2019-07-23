@@ -1,1 +1,1 @@
-include ':app', ':android-pdf-viewer', ':signature-pad', ':pdf-operation', ':PdfiumAndroid', ':pdf-create'
+include ':app', ':android-pdf-viewer', ':signature-pad', ':pdf-operation'

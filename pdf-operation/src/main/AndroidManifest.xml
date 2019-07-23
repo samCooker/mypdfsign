@@ -2,7 +2,7 @@
           package="cn.com.chaochuang.pdf_operation">
 
     <application android:supportsRtl="true">
-        <activity android:name=".SignPdfView">
+        <activity android:name=".SignPdfView" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         </activity>
     </application>
 </manifest>

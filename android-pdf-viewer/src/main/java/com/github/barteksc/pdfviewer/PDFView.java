@@ -21,51 +21,30 @@ import android.graphics.Paint.Style;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
-
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
 import com.github.barteksc.pdfviewer.link.DefaultLinkHandler;
 import com.github.barteksc.pdfviewer.link.LinkHandler;
-import com.github.barteksc.pdfviewer.listener.Callbacks;
-import com.github.barteksc.pdfviewer.listener.OnDrawListener;
-import com.github.barteksc.pdfviewer.listener.OnErrorListener;
-import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener;
-import com.github.barteksc.pdfviewer.listener.OnLongPressListener;
-import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
-import com.github.barteksc.pdfviewer.listener.OnPageErrorListener;
-import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
-import com.github.barteksc.pdfviewer.listener.OnRenderListener;
-import com.github.barteksc.pdfviewer.listener.OnTapListener;
+import com.github.barteksc.pdfviewer.listener.*;
+import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 import com.github.barteksc.pdfviewer.scroll.ScrollHandle;
-import com.github.barteksc.pdfviewer.source.AssetSource;
-import com.github.barteksc.pdfviewer.source.ByteArraySource;
-import com.github.barteksc.pdfviewer.source.DocumentSource;
-import com.github.barteksc.pdfviewer.source.FileSource;
-import com.github.barteksc.pdfviewer.source.InputStreamSource;
-import com.github.barteksc.pdfviewer.source.UriSource;
-import com.github.barteksc.pdfviewer.util.Constants;
-import com.github.barteksc.pdfviewer.util.FitPolicy;
-import com.github.barteksc.pdfviewer.util.MathUtils;
-import com.github.barteksc.pdfviewer.util.SnapEdge;
-import com.github.barteksc.pdfviewer.util.Util;
+import com.github.barteksc.pdfviewer.source.*;
+import com.github.barteksc.pdfviewer.util.*;
 import com.github.gcacace.signaturepad.views.SignaturePad;
+import com.github.gcacace.signaturepad.views.SketchBoard;
 import com.shockwave.pdfium.PdfDocument;
 import com.shockwave.pdfium.PdfiumCore;
 import com.shockwave.pdfium.util.Size;
 import com.shockwave.pdfium.util.SizeF;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -86,7 +65,6 @@ import java.util.List;
  * - DocumentPage = A page of the PDF document.
  * - UserPage = A page as defined by the user.
  * By default, they're the same. But the user can change the pages order
- * using {@link #load(DocumentSource, String, int[])}. In this
  * particular case, a userPage of 5 can refer to a documentPage of 17.
  */
 public class PDFView extends RelativeLayout {
@@ -236,6 +214,11 @@ public class PDFView extends RelativeLayout {
 
     /** Holds last used Configurator that should be loaded when view has size */
     private Configurator waitingDocumentConfigurator;
+
+    /**
+     * 物理尺寸和显示尺寸比例
+     */
+    private float displayRadio;
 
     /** Construct the initial view */
     public PDFView(Context context, AttributeSet set) {
@@ -585,13 +568,15 @@ public class PDFView extends RelativeLayout {
         // Moves the canvas before drawing any element
         float currentXOffset = this.currentXOffset;
         float currentYOffset = this.currentYOffset;
-        Log.d(TAG,"currentXOffset:"+currentXOffset+"--currentYOffset"+currentYOffset);
+        Log.d(TAG,"currentXOffset:"+currentXOffset+"--currentYOffset:"+currentYOffset);
+        Log.d(TAG,"width:"+getWidth()+"--height:"+getHeight());
+        SizeF size = pdfFile.getMaxPageSize();
+        Log.d(TAG,"width:"+size.getWidth()+"--height:"+size.getHeight());
         canvas.translate(currentXOffset, currentYOffset);
 
         // Draws thumbnails
         for (PagePart part : cacheManager.getThumbnails()) {
             drawPart(canvas, part);
-
         }
 
         // Draws parts
@@ -602,6 +587,12 @@ public class PDFView extends RelativeLayout {
                 onDrawPagesNums.add(part.getPage());
             }
         }
+
+        // 手写签批
+        for (HandwritingData data : cacheManager.getHandwritePart()){
+            drawHandwritePart(canvas, data);
+        }
+
 
         for (Integer page : onDrawPagesNums) {
             drawWithListener(canvas, page, callbacks.getOnDrawAll());
@@ -688,15 +679,55 @@ public class PDFView extends RelativeLayout {
         }
 
         canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
-
-        if (Constants.DEBUG_MODE) {
-            debugPaint.setColor(part.getPage() % 2 == 0 ? Color.RED : Color.BLUE);
-            canvas.drawRect(dstRect, debugPaint);
-        }
-
         // Restore the canvas position
         canvas.translate(-localTranslationX, -localTranslationY);
 
+    }
+
+    /**
+     * 手写批注显示
+     * @param canvas
+     * @param data
+     */
+    private void drawHandwritePart(Canvas canvas, HandwritingData data){
+        Bitmap renderedBitmap = data.getImageBitmap();
+
+        if (renderedBitmap.isRecycled()) {
+            return;
+        }
+
+        float localTranslationX;
+        float localTranslationY;
+        SizeF size = pdfFile.getPageSize(data.getPageNo());
+
+        if (swipeVertical) {
+            localTranslationY = pdfFile.getPageOffset(data.getPageNo(), zoom);
+            float maxWidth = pdfFile.getMaxPageWidth();
+            localTranslationX = toCurrentScale(maxWidth - size.getWidth()) / 2;
+        } else {
+            localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
+            float maxHeight = pdfFile.getMaxPageHeight();
+            localTranslationY = toCurrentScale(maxHeight - size.getHeight()) / 2;
+        }
+        canvas.translate(localTranslationX, localTranslationY);
+        //原图片大小
+        Rect srcRect = new Rect(0, 0, renderedBitmap.getWidth(), renderedBitmap.getHeight());
+        //变换后的图片大小
+        float x = data.getPx()*getDisplayWRadio();
+        float y = data.getPy()*getDisplayHRadio();
+        RectF dstRect = new RectF(x*zoom,y*zoom,(x+data.getImageWidth()*getDisplayWRadio())*zoom,(y+data.getImageHeight()*getDisplayHRadio())*zoom);
+
+        float translationX = currentXOffset + localTranslationX;
+        float translationY = currentYOffset + localTranslationY;
+        if (translationX + dstRect.left >= getWidth() || translationX + dstRect.right <= 0 ||
+                translationY + dstRect.top >= getHeight() || translationY + dstRect.bottom <= 0) {
+            canvas.translate(-localTranslationX, -localTranslationY);
+            return;
+        }
+
+        canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
+
+        canvas.translate(-localTranslationX, -localTranslationY);
     }
 
     /**
@@ -764,7 +795,7 @@ public class PDFView extends RelativeLayout {
      *
      * @param part The created PagePart.
      */
-    public void onBitmapRendered(PagePart part) {
+    public void addHandwritingData(PagePart part) {
         // when it is first rendered part
         if (state == State.LOADED) {
             state = State.SHOWN;
@@ -777,6 +808,14 @@ public class PDFView extends RelativeLayout {
             cacheManager.cachePart(part);
         }
         redraw();
+    }
+
+    /**
+     * 加入新的手写批注数据
+     * @param data
+     */
+    public void addHandwritingData(HandwritingData data){
+        cacheManager.cacheHandwriteImage(data);
     }
 
     public void moveTo(float offsetX, float offsetY) {
@@ -802,7 +841,7 @@ public class PDFView extends RelativeLayout {
             // Check X offset
             float scaledPageWidth = toCurrentScale(pdfFile.getMaxPageWidth());
             if (scaledPageWidth < getWidth()) {
-                offsetX = getWidth() / 2 - scaledPageWidth / 2;
+                offsetX = getWidth() / 2.0f - scaledPageWidth / 2;
             } else {
                 if (offsetX > 0) {
                     offsetX = 0;
@@ -834,7 +873,7 @@ public class PDFView extends RelativeLayout {
             // Check Y offset
             float scaledPageHeight = toCurrentScale(pdfFile.getMaxPageHeight());
             if (scaledPageHeight < getHeight()) {
-                offsetY = getHeight() / 2 - scaledPageHeight / 2;
+                offsetY = getHeight() / 2.0f - scaledPageHeight / 2;
             } else {
                 if (offsetY > 0) {
                     offsetY = 0;
@@ -1532,37 +1571,36 @@ public class PDFView extends RelativeLayout {
 
         LayoutParams layoutParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
-        SizeF size = pdfFile.getPageSize(currentPage);
+        SizeF size = pdfFile.getMaxPageSize();
+
         layoutParams.width = (int) toCurrentScale(size.getWidth());
         layoutParams.height = (int) toCurrentScale(size.getHeight());
 
+        layoutParams.addRule(CENTER_IN_PARENT);
         signView.setLayoutParams(layoutParams);
 
-        layoutParams.addRule(CENTER_IN_PARENT);
-
         if(signaturePad!=null){
-            signaturePad.setVisibility(View.VISIBLE);
-        }else{
-            this.addView(signView);
-            signaturePad = signView.findViewById(R.id.signature_pad);
-            signaturePad.setMinWidth(1.6f);
-            signaturePad.setMaxWidth(2.6f);
-            signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
-                @Override
-                public void onStartSigning() {
-
-                }
-
-                @Override
-                public void onSigned() {
-                }
-
-                @Override
-                public void onClear() {
-
-                }
-            });
+            this.removeView(signView);
         }
+        this.addView(signView);
+        signaturePad = signView.findViewById(R.id.signature_pad);
+        signaturePad.setMinWidth(0.6f);
+        signaturePad.setMaxWidth(3.6f);
+        signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
+            @Override
+            public void onStartSigning() {
+
+            }
+
+            @Override
+            public void onSigned() {
+            }
+
+            @Override
+            public void onClear() {
+
+            }
+        });
     }
 
     public void hideSignView(){
@@ -1589,12 +1627,100 @@ public class PDFView extends RelativeLayout {
         }
     }
 
-    public void insertSignImages(){
-        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/touxiang.jpg";
-        try {
-            pdfFile.insertSignImage(new File(filePath));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+    public void signEraseMode(boolean eraseMode){
+        if(signaturePad!=null){
+            if(eraseMode) {
+                signaturePad.setMode(SketchBoard.Mode.ERASE);
+            }else{
+                signaturePad.setMode(SketchBoard.Mode.DRAW);
+            }
         }
+    }
+
+    public Bitmap getSignBitmap(){
+        if(signaturePad!=null){
+            return signaturePad.getTransparentSignatureBitmap(true);
+        }
+        return null;
+    }
+
+    public boolean isHandwritingEmpty(){
+        return signaturePad.isEmpty();
+    }
+
+    /**
+     * 获取相对屏幕坐标系（屏幕左上角为坐标原点）的坐标
+     * @return
+     */
+    public float getSignX(){
+        if(signaturePad!=null){
+            float offsetX;
+            if (currentXOffset>=0) {
+                offsetX = 0;
+            }else{
+                SizeF size = pdfFile.getMaxPageSize();
+                offsetX = -currentXOffset-(currentPage*size.getWidth()*zoom);
+            }
+            return (signaturePad.getxMin()+offsetX)/zoom;
+        }
+        return 0;
+    }
+    public float getSignY(){
+        if(signaturePad!=null){
+            float offsetY;
+            if (currentYOffset>=0) {
+                offsetY = 0;
+            } else{
+                offsetY = -currentYOffset;
+            }
+            return (signaturePad.getyMin()+offsetY)/zoom;
+        }
+        return 0;
+    }
+
+
+    public float getDisplayPdfHeight(){
+        SizeF sizeF = pdfFile.getMaxPageSize();
+        return sizeF.getHeight();
+    }
+
+    public float getPhysicalPdfHeight(){
+        return pdfFile.getPageHeightPoint(currentPage);
+    }
+
+    public float getPhysicalPdfWidth(){
+        return pdfFile.getPageWidthPoint(currentPage);
+    }
+
+    /**
+     * 显示宽度和物理宽度的比值
+     * @return
+     */
+    public float getDisplayWRadio(){
+        int width = pdfFile.getPageWidthPoint(currentPage);
+        SizeF size = pdfFile.getMaxPageSize();
+        return size.getWidth()/width;
+    }
+
+    /**
+     * 显示高度和物理高度的比值
+     * @return
+     */
+    public float getDisplayHRadio(){
+        int height = pdfFile.getPageHeightPoint(currentPage);
+        SizeF size = pdfFile.getMaxPageSize();
+        return size.getHeight()/height;
+    }
+
+    /**
+     * 查看坐标是否有手写批注图片
+     * @param x
+     * @param y
+     * @return
+     */
+    public Bitmap checkInHandwriteView(float x,float y){
+        cacheManager.getHandwritePart();
+
+        return null;
     }
 }

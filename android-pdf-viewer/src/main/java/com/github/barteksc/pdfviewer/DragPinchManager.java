@@ -17,6 +17,7 @@ package com.github.barteksc.pdfviewer;
 
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -190,6 +191,9 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     @Override
     public void onLongPress(MotionEvent e) {
         pdfView.callbacks.callOnLongPress(e);
+
+        Log.d("onLongPress",e.getX()+"::"+e.getY());
+
     }
 
     @Override

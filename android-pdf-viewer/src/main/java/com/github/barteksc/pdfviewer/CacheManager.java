@@ -18,6 +18,7 @@ package com.github.barteksc.pdfviewer;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 
+import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ class CacheManager {
 
     private final List<PagePart> thumbnails;
 
+    private final List<HandwritingData> handwriteDataList;
+
     private final Object passiveActiveLock = new Object();
 
     private final PagePartComparator orderComparator = new PagePartComparator();
@@ -45,6 +48,7 @@ class CacheManager {
         activeCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         passiveCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         thumbnails = new ArrayList<>();
+        handwriteDataList = new ArrayList<>();
     }
 
     public void cachePart(PagePart part) {
@@ -90,6 +94,23 @@ class CacheManager {
             addWithoutDuplicates(thumbnails, part);
         }
 
+    }
+
+    public void cacheHandwriteImage(HandwritingData part) {
+        synchronized (handwriteDataList) {
+            for (HandwritingData data: handwriteDataList){
+                if(data.equals(part)){
+                    return;
+                }
+            }
+            handwriteDataList.add(part);
+        }
+    }
+
+    public List<HandwritingData> getHandwritePart() {
+        synchronized (handwriteDataList) {
+            return handwriteDataList;
+        }
     }
 
     public boolean upPartIfContained(int page, RectF pageRelativeBounds, int toOrder) {
