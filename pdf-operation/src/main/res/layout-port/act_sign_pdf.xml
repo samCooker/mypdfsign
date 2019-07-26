@@ -3,7 +3,7 @@
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="match_parent" xmlns:fab="http://schemas.android.com/apk/res-auto"
         android:id="@+id/rl_pdf_view"
         tools:context=".SignPdfView">
 
@@ -22,5 +22,9 @@
             android:layout_alignParentEnd="true"
             android:layout_marginBottom="10dp"
             android:layout_marginEnd="10dp"
+            fab:menu_labels_padding="4dp"
+            fab:menu_colorNormal="@color/pdf_bg_primary"
+            fab:menu_colorPressed="@color/pdf_btn_press_white"
+            fab:menu_colorRipple="@color/pdf_bg"
     />
 </RelativeLayout>

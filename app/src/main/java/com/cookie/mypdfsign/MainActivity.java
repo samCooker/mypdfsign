@@ -16,9 +16,9 @@ public class MainActivity extends Activity {
         Intent intent = new Intent(this,SignPdfView.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(Constants.KEY_FILE_PATH, Environment.getExternalStorageDirectory().getPath() + "/测试公文.pdf");
-        intent.putExtra(Constants.PARAM_FILE_ID, "1");
+        intent.putExtra(Constants.PARAM_FILE_ID, "2c9f80816c2cfb25016c2d0065120000");
         intent.putExtra(Constants.KEY_SERVER_URL, "http://192.168.31.60:8089/filecomment/");
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxMjMiLCJ1c2VyTmFtZSI6ImFkbWluIiwiZXhwIjoxNTYzODcxMjU3fQ.ykidmCYdfUP5q1oBjMTEbufM6pOZfGf8HS4PrOKRvsE");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidXNlck5hbWUiOiLns7vnu5_nrqHnkIblkZgiLCJleHAiOjE1NjQxNDA5ODN9.om3mkIuOIjCAz1AMipCjFkQ4OgiG9Oe3fZwT_a6iVls");
         startActivity(intent);
 
     }

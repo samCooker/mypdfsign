@@ -180,28 +180,28 @@ public class SketchBoard {
 
             Bezier curve = mBezierCached.set(mPoints.get(1), c2, c3, mPoints.get(2));
 
-            TimedPoint startPoint = curve.startPoint;
-            TimedPoint endPoint = curve.endPoint;
-
-            float velocity = endPoint.velocityFrom(startPoint);
-            velocity = Float.isNaN(velocity) ? 0.0f : velocity;
-
-            velocity = mVelocityFilterWeight * velocity
-                    + (1 - mVelocityFilterWeight) * mLastVelocity;
+//            TimedPoint startPoint = curve.startPoint;
+//            TimedPoint endPoint = curve.endPoint;
+//
+//            float velocity = endPoint.velocityFrom(startPoint);
+//            velocity = Float.isNaN(velocity) ? 0.0f : velocity;
+//
+//            velocity = mVelocityFilterWeight * velocity
+//                    + (1 - mVelocityFilterWeight) * mLastVelocity;
 
             // The new width is a function of the velocity. Higher velocities
             // correspond to thinner strokes.
-            float newWidth = strokeWidth(velocity);
+//            float newWidth = strokeWidth(velocity);
 
-            Log.d("board","strokeWidth:"+newWidth);
             // The Bezier's width starts out as last curve's final width, and
             // gradually changes to the stroke width just calculated. The new
             // width calculation is based on the velocity between the Bezier's
             // start and end mPoints.
-            addBezier(curve, mLastWidth, newWidth);
+//            addBezier(curve, mLastWidth, newWidth);
+            addBezier(curve, mMinWidth, mMinWidth);
 
-            mLastVelocity = velocity;
-            mLastWidth = newWidth;
+//            mLastVelocity = velocity;
+//            mLastWidth = newWidth;
 
             // Remove the first element from the list,
             // so that we always have no more than 4 mPoints in mPoints array.

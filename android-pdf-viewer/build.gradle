@@ -28,7 +28,7 @@ android {
     compileSdkVersion 26
 
     defaultConfig {
-        minSdkVersion 14
+        minSdkVersion 21
         targetSdkVersion 26
         versionCode 1
         versionName "3.1.0-beta.1"
@@ -50,11 +50,11 @@ buildscript {
 }
 
 dependencies {
-    api fileTree(dir: 'libs', include: ['*.jar'])
+    api fileTree(dir: 'libs', include: ['*.jar','*.aar'])
     implementation 'com.android.support:support-compat:26.1.0'
 
     implementation project(path: ':signature-pad')
-    implementation files('libs\\PdfiumAndroid-release.aar')
+    implementation project(path: ':android-pdfium')
 
 }
 

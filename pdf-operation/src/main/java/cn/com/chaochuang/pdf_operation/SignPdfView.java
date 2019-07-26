@@ -7,13 +7,17 @@ import android.app.ProgressDialog;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
@@ -25,14 +29,16 @@ import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
+import okhttp3.*;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
 
@@ -55,6 +61,11 @@ public class SignPdfView extends AppCompatActivity {
     private OkHttpUtil httpUtil;
     private PdfActionReceiver pdfActionReceiver;
 
+    /**
+     * 本地数据
+     * */
+    private SharedPreferences penSettingData;
+
     private String fileId;
     private String filePath;
     private String serverUrl;
@@ -76,9 +87,13 @@ public class SignPdfView extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_sign_pdf);
 
+        //获取本地数据
+        penSettingData = getSharedPreferences(PenSettingFragment.PEN_SETTING_DATA, Context.MODE_PRIVATE);
+
         this.initParams();
 
         pdfView = findViewById(R.id.pdf_view);
+
         //加载提示框
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
@@ -102,7 +117,7 @@ public class SignPdfView extends AppCompatActivity {
                 permissions = mPermissionList.toArray(new String[mPermissionList.size()]);
                 ActivityCompat.requestPermissions(this, permissions, REQ_CODE);
             }else{
-                findHandwritingData();
+                downloadOrOpenFile();
             }
         }
     }
@@ -110,7 +125,7 @@ public class SignPdfView extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(REQ_CODE == requestCode){
-            findHandwritingData();
+            downloadOrOpenFile();
         }
     }
 
@@ -125,7 +140,9 @@ public class SignPdfView extends AppCompatActivity {
         handWriteItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pdfView.showSignView();
+                float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
+                int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
+                pdfView.showSignView(penWidth,penColor);
                 showHandWriteBtns();
             }
         });
@@ -158,8 +175,35 @@ public class SignPdfView extends AppCompatActivity {
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pdfView.hideSignView();
-                showActionBtns();
+                if(!pdfView.isHandwritingEmpty()){
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                    builder.setMessage("有未保存的手写内容，是否退出");
+                    builder.setTitle("退出手写模式");
+                    builder.setPositiveButton("确定",
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    pdfView.hideSignView();
+                                    showActionBtns();
+                                    Toast.makeText(SignPdfView.this,"已关闭手写批注模式",Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                    builder.setNegativeButton("取消",
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog,int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+
+                    final Dialog dialog = builder.create();
+                    dialog.setCancelable(false);
+                    dialog.show();
+                }else{
+                    pdfView.hideSignView();
+                    showActionBtns();
+                }
+
             }
         });
         //endregion
@@ -282,6 +326,15 @@ public class SignPdfView extends AppCompatActivity {
         btnPen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                PenSettingFragment penSettingFragment = new PenSettingFragment();
+                penSettingFragment.showFragmentDlg(getFragmentManager(), "penSettingFragment", new PenSettingFragment.OnSaveListener() {
+                    @Override
+                    public void onSaveAction() {
+                        float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
+                        int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
+                        pdfView.setPenWidth(penWidth,penColor);
+                    }
+                });
             }
         });
         //endregion
@@ -305,7 +358,7 @@ public class SignPdfView extends AppCompatActivity {
                 }else{
                     Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
                     btnErase.setImageResource(R.drawable.ic_pdf_erase);
-                    actionsMenu.addMenuButton(btnErase);
+                    actionsMenu.removeMenuButton(btnErase);
                     addHandWriteBtns();
                 }
                 pdfView.signEraseMode(eraseFlag);
@@ -402,9 +455,110 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
+    /**
+     * 下载文件
+     */
+    private void downloadOrOpenFile(){
+        broadcastIntent(BC_SHOW_LOADING,"正在下载文件");
+        httpUtil.get(serverUrl + URL_GET_MD5 + "?fileId=" + fileId, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                File pdfRoot = new File(getExternalCacheDir(),"comment_pdf");
+                if(!pdfRoot.exists()){
+                    pdfRoot.mkdir();
+                }
+                if(response.isSuccessful()&&response.body()!=null) {
+                    String data = response.body().string();
+                    AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                    if(resData.getData()!=null) {
+                        Map dataMap = JSON.parseObject(resData.getData().toString());
+                        File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
+                        if(pdfFile.exists()){
+                            filePath = pdfFile.getAbsolutePath();
+                            findHandwritingData();
+                        }else{
+                            //下载文件
+                            downloadFile(pdfFile);
+                        }
+                    }
+                }else{
+                    broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+                }
+            }
+        });
+    }
+
+    private void downloadFile(final File file){
+        if(!file.getParentFile().exists()){
+            file.getParentFile().mkdirs();
+        }
+        OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).build();
+        Request request = new Request.Builder().url(serverUrl +URL_DOWNLOAD_FILE+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME,serverToken).build();
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                ResponseBody responseBody = null;
+                BufferedInputStream bis = null;
+                FileOutputStream fos = null;
+                try {
+                    if (call.isCanceled()) {
+                        broadcastIntent(BC_RESPONSE_FAILURE,"已取消文件下载");
+                        return;
+                    }
+                    if (response.isSuccessful()) {
+                        responseBody = response.body();
+                        long total = responseBody.contentLength();
+                        bis = new BufferedInputStream(responseBody.byteStream());
+                        fos = new FileOutputStream(file);
+                        byte[] bytes = new byte[1024 * 8];
+                        int len;
+                        long current = 0;
+                        while ((len = bis.read(bytes)) != -1) {
+                            fos.write(bytes, 0, len);
+                            fos.flush();
+                            current += len;
+                            //计算进度
+                            int progress = (int) (100 * current / total);
+                            Log.d(TAG,"下载进度："+progress);
+                        }
+                        broadcastIntent(BC_HIDE_LOADING);
+                        filePath = file.getAbsolutePath();
+                        findHandwritingData();
+                    } else {
+                        broadcastIntent(BC_HIDE_LOADING);
+                        broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败");
+                    }
+                } catch (Exception e) {
+                    broadcastIntent(BC_HIDE_LOADING);
+                    broadcastIntent(BC_RESPONSE_FAILURE,"文件下载异常");
+                } finally {
+                    if (null != responseBody) {
+                        responseBody.close();
+                    }
+                    if(bis!=null) {
+                        bis.close();
+                    }
+                    if(fos!=null) {
+                        fos.close();
+                    }
+                }
+            }
+        });
+    }
+
     private void findHandwritingData(){
         //查询批注数据
-        showProgressDialog();
+        showProgressDialog("正在打开文件");
         httpUtil.get(serverUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -466,7 +620,7 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.addMenuButton(btnPen);
         actionsMenu.addMenuButton(btnUndo);
         actionsMenu.addMenuButton(btnRedo);
-        //actionsMenu.addMenuButton(btnErase);
+//        actionsMenu.addMenuButton(btnErase);
         actionsMenu.addMenuButton(btnClear);
         actionsMenu.addMenuButton(btnClose);
     }
@@ -475,7 +629,7 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.removeMenuButton(btnPen);
         actionsMenu.removeMenuButton(btnUndo);
         actionsMenu.removeMenuButton(btnRedo);
-        //actionsMenu.removeMenuButton(btnErase);
+//        actionsMenu.removeMenuButton(btnErase);
         actionsMenu.removeMenuButton(btnClear);
         actionsMenu.removeMenuButton(btnClose);
     }

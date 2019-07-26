@@ -692,7 +692,7 @@ public class PDFView extends RelativeLayout {
     private void drawHandwritePart(Canvas canvas, HandwritingData data){
         Bitmap renderedBitmap = data.getImageBitmap();
 
-        if (renderedBitmap.isRecycled()) {
+        if (renderedBitmap==null||renderedBitmap.isRecycled()) {
             return;
         }
 
@@ -1564,7 +1564,7 @@ public class PDFView extends RelativeLayout {
     /**
      * （新添加方法） 显示签批图层
      */
-    public void showSignView(){
+    public void showSignView(float penWidth,int penColor){
 
         LayoutInflater inflater = LayoutInflater.from(this.getContext());
         View signView = inflater.inflate(R.layout.sign_view,this,false);
@@ -1584,8 +1584,7 @@ public class PDFView extends RelativeLayout {
         }
         this.addView(signView);
         signaturePad = signView.findViewById(R.id.signature_pad);
-        signaturePad.setMinWidth(0.6f);
-        signaturePad.setMaxWidth(3.6f);
+        setPenWidth(penWidth,penColor);
         signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
             @Override
             public void onStartSigning() {
@@ -1601,6 +1600,12 @@ public class PDFView extends RelativeLayout {
 
             }
         });
+    }
+
+    public void setPenWidth(float width, int penColor){
+        signaturePad.setMinWidth(width);
+        signaturePad.setMaxWidth(width*1.1F);
+        signaturePad.setPenColor(penColor);
     }
 
     public void hideSignView(){
