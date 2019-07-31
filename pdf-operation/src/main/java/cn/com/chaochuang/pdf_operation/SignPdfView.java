@@ -16,8 +16,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
@@ -70,6 +68,9 @@ public class SignPdfView extends AppCompatActivity {
     private String filePath;
     private String serverUrl;
     private String serverToken;
+    private String userId;
+    private String userName;
+    private Boolean penOnly;
     private int prePage=0;
 
     /**
@@ -94,12 +95,39 @@ public class SignPdfView extends AppCompatActivity {
 
         pdfView = findViewById(R.id.pdf_view);
 
+        pdfView.setPdfEditListener(new PDFView.PdfEditListener() {
+            @Override
+            public void deleteComment(final String id) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                builder.setMessage("是否删除批注");
+                builder.setTitle("删除");
+                builder.setPositiveButton("确定",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                deleteCommentById(id);
+                            }
+                        });
+                builder.setNegativeButton("取消",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog,int which) {
+                                dialog.dismiss();
+                            }
+                        });
+
+                final Dialog dialog = builder.create();
+                dialog.setCancelable(false);
+                dialog.show();
+            }
+        });
+
         //加载提示框
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
-        progressDialog.setCancelable(true);
+        progressDialog.setCancelable(false);
         this.initMenuBtn();
-        this.initBroadcaseReceiver();
+        this.initBroadcastReceiver();
         //获取权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String[] permissions = new String[]{
@@ -142,7 +170,7 @@ public class SignPdfView extends AppCompatActivity {
             public void onClick(View v) {
                 float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
                 int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
-                pdfView.showSignView(penWidth,penColor);
+                pdfView.setSignaturePad(penWidth,penColor,penOnly);
                 showHandWriteBtns();
             }
         });
@@ -242,8 +270,8 @@ public class SignPdfView extends AppCompatActivity {
                                 handwritingData.setPdfFileHeight(pdfView.getPhysicalPdfHeight());
                                 handwritingData.setPdfFileWidth(pdfView.getPhysicalPdfWidth());
                                 handwritingData.setPageNo(pdfView.getCurrentPage());
-                                //添加到图层
-                                pdfView.addHandwritingData(handwritingData);
+                                handwritingData.setSignerId(userId);
+                                handwritingData.setSignerName(userName);
                                 //保存到远程服务器
                                 saveHandwritingData(handwritingData);
                             }else{
@@ -378,6 +406,12 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(Constants.KEY_FILE_PATH)) {
             filePath = intent.getStringExtra(Constants.KEY_FILE_PATH);
         }
+        if (intent.hasExtra(Constants.PARAM_USER_ID)) {
+            userId = intent.getStringExtra(Constants.PARAM_USER_ID);
+        }
+        if (intent.hasExtra(PARAM_USER_NAME)) {
+            userName = intent.getStringExtra(PARAM_USER_NAME);
+        }
         if (intent.hasExtra(PARAM_FILE_ID)) {
             fileId = intent.getStringExtra(Constants.PARAM_FILE_ID);
         }
@@ -387,12 +421,15 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(Constants.KEY_SERVER_TOKEN)) {
             serverToken = intent.getStringExtra(Constants.KEY_SERVER_TOKEN);
         }
+        if (intent.hasExtra(Constants.KEY_PEN_ONLY)) {
+            penOnly = intent.getBooleanExtra(Constants.KEY_PEN_ONLY,false);
+        }
 
         httpUtil = new OkHttpUtil(true,serverToken);
     }
 
 
-    private void initBroadcaseReceiver() {
+    private void initBroadcastReceiver() {
         pdfActionReceiver = new PdfActionReceiver();
 
         IntentFilter handwritingListFilter = new IntentFilter(BC_HANDWRITING_LIST);
@@ -416,15 +453,16 @@ public class SignPdfView extends AppCompatActivity {
                 .swipeHorizontal(true)
                 .pageSnap(true)
                 .pageFling(true)
-                .enableAnnotationRendering(true)
+                .enableAnnotationRendering(false)
                 .scrollHandle(null)
                 .spacing(0)
                 .autoSpacing(true)
+                .userData(userId)
                 //宽度自适应（不可修改，修改后插入手写坐标会发生变化）
                 .pageFitPolicy(FitPolicy.WIDTH).load();
     }
 
-    private void saveHandwritingData(HandwritingData handwritingData) {
+    private void saveHandwritingData(final HandwritingData handwritingData) {
         if(handwritingData!=null&&handwritingData.getImageBitmap()!=null) {
             HandwritingData saveBean = new HandwritingData();
             saveBean.setFileId(fileId);
@@ -435,6 +473,8 @@ public class SignPdfView extends AppCompatActivity {
             saveBean.setImageHeight(handwritingData.getImageHeight());
             saveBean.setPdfFileWidth(handwritingData.getPdfFileWidth());
             saveBean.setPdfFileHeight(handwritingData.getPdfFileHeight());
+            saveBean.setSignerId(handwritingData.getSignerId());
+            saveBean.setSignerName(handwritingData.getSignerName());
             String base64Str = ImageTools.bitmapToBase64(handwritingData.getImageBitmap());
             saveBean.setBase64Code(base64Str);
             httpUtil.post(serverUrl + URL_HANDWRITING_SAVE, "jsonData="+JSON.toJSONString(saveBean), new Callback() {
@@ -446,7 +486,46 @@ public class SignPdfView extends AppCompatActivity {
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     if(response.isSuccessful()&&response.body()!=null) {
-                        broadcastIntent(BC_SAVE_HANDWRITING_SUCCESS);
+                        String data = response.body().string();
+                        AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                        if(resData.getData()!=null){
+                            //添加到图层
+                            handwritingData.setId(resData.getData().toString());
+                            pdfView.addHandwritingData(handwritingData);
+                            broadcastIntent(BC_SAVE_HANDWRITING_SUCCESS);
+                        }else{
+                            broadcastIntent(BC_RESPONSE_FAILURE);
+                        }
+
+                    }else {
+                        broadcastIntent(BC_RESPONSE_FAILURE);
+                    }
+                }
+            });
+        }
+    }
+
+    private void deleteCommentById(final String id){
+        if(id!=null){
+            httpUtil.get(serverUrl + URL_HANDWRITING_DELETE + "?id="+id, new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    broadcastIntent(BC_RESPONSE_FAILURE);
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if(response.isSuccessful()&&response.body()!=null) {
+                        String data = response.body().string();
+                        AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                        if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())){
+                            pdfView.removeHandwritingData(id);
+                            pdfView.invalidate();
+                            broadcastIntent(BC_RESPONSE_SUCCESS);
+                        }else{
+                            broadcastIntent(BC_RESPONSE_FAILURE);
+                        }
+
                     }else {
                         broadcastIntent(BC_RESPONSE_FAILURE);
                     }
@@ -477,14 +556,19 @@ public class SignPdfView extends AppCompatActivity {
                     AppResponse resData = JSON.parseObject(data, AppResponse.class);
                     if(resData.getData()!=null) {
                         Map dataMap = JSON.parseObject(resData.getData().toString());
-                        File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
-                        if(pdfFile.exists()){
-                            filePath = pdfFile.getAbsolutePath();
-                            findHandwritingData();
+                        if(!dataMap.isEmpty()){
+                            File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
+                            if(pdfFile.exists()){
+                                filePath = pdfFile.getAbsolutePath();
+                                findHandwritingData();
+                            }else{
+                                //下载文件
+                                downloadFile(pdfFile);
+                            }
                         }else{
-                            //下载文件
-                            downloadFile(pdfFile);
+                            broadcastIntent(BC_RESPONSE_FAILURE,"文件打开失败");
                         }
+
                     }
                 }else{
                     broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
@@ -558,7 +642,7 @@ public class SignPdfView extends AppCompatActivity {
 
     private void findHandwritingData(){
         //查询批注数据
-        showProgressDialog("正在打开文件");
+        broadcastIntent(BC_SHOW_LOADING,"正在打开文件");
         httpUtil.get(serverUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {

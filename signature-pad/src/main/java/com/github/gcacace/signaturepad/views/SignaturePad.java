@@ -200,6 +200,7 @@ public class SignaturePad extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        Log.d("touch","----signPad onTouchEvent");
         // sketchBoard.getDrawState() != 0 means currently in redo/undo drawing restore
         if (!isEnabled() && sketchBoard.getDrawState() != 0) {
             return false;

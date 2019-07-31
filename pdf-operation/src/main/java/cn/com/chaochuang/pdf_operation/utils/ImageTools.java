@@ -5,12 +5,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.support.annotation.NonNull;
 import android.util.Base64;
-import com.github.barteksc.pdfviewer.model.HandwritingData;
-import com.tom_roush.pdfbox.pdmodel.PDDocument;
-import com.tom_roush.pdfbox.pdmodel.PDPage;
-import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import java.io.*;
 
@@ -57,43 +51,6 @@ public class ImageTools {
         }
         return null;
     }
-
-    /**
-     * 将图片保存到pdf文件
-     * @param filePath
-     * @param data
-     * @return
-     */
-    public static boolean insertPdfBitmap(String filePath, HandwritingData data){
-        PDDocument doc = null;
-        try {
-            //使用pdf-box库对PDF进行插入图片操作
-            File file = new File(filePath);
-            doc = PDDocument.load(file);
-            PDPage page = doc.getPage(data.getPageNo());
-            PDImageXObject pdImage = LosslessFactory.createFromImage(doc, data.getImageBitmap());
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page, true, false);
-            //pdf坐标系的Y轴坐标
-            float pdfY = data.getPdfFileHeight()-data.getPy()-data.getImageHeight();
-            //计算实际pdf的坐标值
-            contentStream.drawImage(pdImage, data.getPx(),  pdfY, data.getImageWidth(), data.getImageHeight());
-            contentStream.close();
-            doc.save(file);
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if(doc!=null){
-                try {
-                    doc.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return false;
-    }
-
 
     /**
      * bitmap转为base64

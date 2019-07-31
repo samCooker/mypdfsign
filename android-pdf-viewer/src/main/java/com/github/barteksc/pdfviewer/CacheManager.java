@@ -21,11 +21,7 @@ import android.support.annotation.Nullable;
 import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 
 import static com.github.barteksc.pdfviewer.util.Constants.Cache.CACHE_SIZE;
 import static com.github.barteksc.pdfviewer.util.Constants.Cache.THUMBNAILS_CACHE_SIZE;
@@ -104,6 +100,21 @@ class CacheManager {
                 }
             }
             handwriteDataList.add(part);
+        }
+    }
+
+    public void removeHandwritingImage(String id){
+        if(id==null){
+            return;
+        }
+        synchronized (handwriteDataList) {
+            Iterator<HandwritingData> iterator = handwriteDataList.iterator();
+            while (iterator.hasNext()){
+                HandwritingData handwritingData = iterator.next();
+                if(id.equals(handwritingData.getId())){
+                    iterator.remove();
+                }
+            }
         }
     }
 

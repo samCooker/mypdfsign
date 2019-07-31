@@ -17,12 +17,15 @@ public class Constants {
     public static final String KEY_FILE_PATH="pdfFilePath";
     public static final String KEY_SERVER_URL="serverUrl";
     public static final String KEY_SERVER_TOKEN="serverToken";
+    public static final String KEY_PEN_ONLY="penOnly";
 
     public static final String PARAM_FILE_ID="fileId";
+    public static final String PARAM_USER_ID="userId";
     public static final String PARAM_USER_NAME="userName";
 
     public static final String URL_HANDWRITING_LIST ="handwriting/list.mo";
     public static final String URL_HANDWRITING_SAVE ="handwriting/save.mo";
+    public static final String URL_HANDWRITING_DELETE ="handwriting/delete.mo";
     public static final String URL_GET_MD5 ="handwriting/getmdf.mo";
     public static final String URL_DOWNLOAD_FILE ="handwriting/download.mo";
 

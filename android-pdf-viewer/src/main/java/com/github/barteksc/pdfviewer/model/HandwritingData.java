@@ -11,6 +11,7 @@ import java.util.Date;
  */
 public class HandwritingData {
 
+    private String id;
     private int pageNo;
     /**
      * 图片相对左上角的坐标
@@ -39,6 +40,13 @@ public class HandwritingData {
     private String signerName;
     private Date signTime;
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public int getPageNo() {
         return pageNo;

@@ -281,17 +281,28 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
+        Log.d("touch","----pdfview onTouch "+event.getAction());
+        Log.d("touch","----pdfview x "+event.getX() + ":" + event.getY());
         if (!enabled) {
             return false;
         }
 
+        pdfView.checkCanEdit(event.getX(),event.getY());
+
         boolean retVal = scaleGestureDetector.onTouchEvent(event);
         retVal = gestureDetector.onTouchEvent(event) || retVal;
 
-        if (event.getAction() == MotionEvent.ACTION_UP) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
+                pdfView.hideSignView();
+            }
+        }else if (event.getAction() == MotionEvent.ACTION_UP) {
             if (scrolling) {
                 scrolling = false;
                 onScrollEnd(event);
+            }
+            if(pdfView.isPenOnly()&&!pdfView.isSignpagVisible()){
+                pdfView.showSignView();
             }
         }
         return retVal;
@@ -309,4 +320,5 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         float absY = Math.abs(velocityY);
         return pdfView.isSwipeVertical() ? absY > absX : absX > absY;
     }
+
 }

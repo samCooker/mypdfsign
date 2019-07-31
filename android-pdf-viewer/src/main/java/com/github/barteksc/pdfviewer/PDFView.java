@@ -28,6 +28,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import com.cookie.actionsheet.ActionSheet;
+import com.cookie.actionsheet.OnActionListener;
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
 import com.github.barteksc.pdfviewer.link.DefaultLinkHandler;
 import com.github.barteksc.pdfviewer.link.LinkHandler;
@@ -36,7 +38,10 @@ import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 import com.github.barteksc.pdfviewer.scroll.ScrollHandle;
 import com.github.barteksc.pdfviewer.source.*;
-import com.github.barteksc.pdfviewer.util.*;
+import com.github.barteksc.pdfviewer.util.FitPolicy;
+import com.github.barteksc.pdfviewer.util.MathUtils;
+import com.github.barteksc.pdfviewer.util.SnapEdge;
+import com.github.barteksc.pdfviewer.util.Util;
 import com.github.gcacace.signaturepad.views.SignaturePad;
 import com.github.gcacace.signaturepad.views.SketchBoard;
 import com.shockwave.pdfium.PdfDocument;
@@ -46,9 +51,11 @@ import com.shockwave.pdfium.util.SizeF;
 
 import java.io.File;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * It supports animations, zoom, cache, and swipe.
@@ -79,6 +86,7 @@ public class PDFView extends RelativeLayout {
     private float midZoom = DEFAULT_MID_SCALE;
     private float maxZoom = DEFAULT_MAX_SCALE;
 
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA);
     /**
      * START - scrolling in first page direction
      * END - scrolling in last page direction
@@ -141,6 +149,10 @@ public class PDFView extends RelativeLayout {
 
     /** Paint object for drawing */
     private Paint paint;
+
+    private Paint commentPaint;
+    private ActionSheet editActionSheet;
+    private ActionSheet infoActionSheet;
 
     /** Paint object for drawing debug stuff */
     private Paint debugPaint;
@@ -215,11 +227,6 @@ public class PDFView extends RelativeLayout {
     /** Holds last used Configurator that should be loaded when view has size */
     private Configurator waitingDocumentConfigurator;
 
-    /**
-     * 物理尺寸和显示尺寸比例
-     */
-    private float displayRadio;
-
     /** Construct the initial view */
     public PDFView(Context context, AttributeSet set) {
         super(context, set);
@@ -236,6 +243,46 @@ public class PDFView extends RelativeLayout {
         pagesLoader = new PagesLoader(this);
 
         paint = new Paint();
+        commentPaint = new Paint();
+        commentPaint.setStyle(Paint.Style.STROKE);
+        commentPaint.setStrokeWidth(4f);
+        commentPaint.setColor(Color.BLUE);
+        commentPaint.setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
+
+        editActionSheet = new ActionSheet(context);
+        editActionSheet.setTitle("操作");
+        editActionSheet.setRootView(this);
+        editActionSheet.setTouchListener(new ActionSheet.ActionSheetTouchListener() {
+            @Override
+            public void onDismiss() {
+                curEditId = "";
+                redraw();
+            }
+        });
+        editActionSheet.addAction("删除", ActionSheet.Style.DESTRUCTIVE, new OnActionListener() {
+            @Override
+            public void onSelected(ActionSheet actionSheet, String title) {
+                Log.d("actionsheet",title);
+                if("删除".equals(title)){
+                    if(pdfEditListener!=null){
+                        pdfEditListener.deleteComment(curEditId);
+                        actionSheet.dismiss();
+                        curEditId="";
+                    }
+                }
+            }
+        });
+
+        infoActionSheet = new ActionSheet(context);
+        infoActionSheet.setRootView(this);
+        infoActionSheet.setTouchListener(new ActionSheet.ActionSheetTouchListener() {
+            @Override
+            public void onDismiss() {
+                curEditId = "";
+                redraw();
+            }
+        });
+
         debugPaint = new Paint();
         debugPaint.setStyle(Style.STROKE);
 
@@ -568,10 +615,6 @@ public class PDFView extends RelativeLayout {
         // Moves the canvas before drawing any element
         float currentXOffset = this.currentXOffset;
         float currentYOffset = this.currentYOffset;
-        Log.d(TAG,"currentXOffset:"+currentXOffset+"--currentYOffset:"+currentYOffset);
-        Log.d(TAG,"width:"+getWidth()+"--height:"+getHeight());
-        SizeF size = pdfFile.getMaxPageSize();
-        Log.d(TAG,"width:"+size.getWidth()+"--height:"+size.getHeight());
         canvas.translate(currentXOffset, currentYOffset);
 
         // Draws thumbnails
@@ -590,7 +633,7 @@ public class PDFView extends RelativeLayout {
 
         // 手写签批
         for (HandwritingData data : cacheManager.getHandwritePart()){
-            drawHandwritePart(canvas, data);
+            drawHandwritingPart(canvas, data);
         }
 
 
@@ -689,7 +732,7 @@ public class PDFView extends RelativeLayout {
      * @param canvas
      * @param data
      */
-    private void drawHandwritePart(Canvas canvas, HandwritingData data){
+    private void drawHandwritingPart(Canvas canvas, HandwritingData data){
         Bitmap renderedBitmap = data.getImageBitmap();
 
         if (renderedBitmap==null||renderedBitmap.isRecycled()) {
@@ -726,6 +769,24 @@ public class PDFView extends RelativeLayout {
         }
 
         canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
+
+        if (curEditId != null && curEditId.equals(data.getId())) {
+            String dateStr = data.getSignTime()!=null?dateFormat.format(data.getSignTime()):"";
+            String info = "签批人员：" + data.getSignerName() + "\n签批时间：" + dateStr;
+
+            //绘制边界
+            canvas.drawRect(dstRect.left - editLinePadding, dstRect.top - editLinePadding, dstRect.right + editLinePadding, dstRect.bottom + editLinePadding, commentPaint);
+            boolean curUserFlag = data.getSignerId() != null && data.getSignerId().equals(userId);
+            RectF infoRecfF = new RectF(translationX + dstRect.left, translationY + dstRect.top, translationX + dstRect.right, translationY + dstRect.bottom);
+            if(curUserFlag) {
+                editActionSheet.setTitle(info);
+                //删除按钮
+                editActionSheet.show(infoRecfF);
+            }else {
+                infoActionSheet.setTitle(info);
+                infoActionSheet.show(infoRecfF);
+            }
+        }
 
         canvas.translate(-localTranslationX, -localTranslationY);
     }
@@ -816,6 +877,10 @@ public class PDFView extends RelativeLayout {
      */
     public void addHandwritingData(HandwritingData data){
         cacheManager.cacheHandwriteImage(data);
+    }
+
+    public void removeHandwritingData(String id){
+        cacheManager.removeHandwritingImage(id);
     }
 
     public void moveTo(float offsetX, float offsetY) {
@@ -1238,6 +1303,10 @@ public class PDFView extends RelativeLayout {
         this.pageFling = pageFling;
     }
 
+    public void setUserId(String userId){
+        this.userId = userId;
+    }
+
     public boolean doPageFling() {
         return pageFling;
     }
@@ -1382,6 +1451,8 @@ public class PDFView extends RelativeLayout {
 
         private boolean nightMode = false;
 
+        private String userId;
+
         private Configurator(DocumentSource documentSource) {
             this.documentSource = documentSource;
         }
@@ -1516,6 +1587,11 @@ public class PDFView extends RelativeLayout {
             return this;
         }
 
+        public Configurator userData(String userId) {
+            this.userId = userId;
+            return this;
+        }
+
         public void load() {
             if (!hasSize) {
                 waitingDocumentConfigurator = this;
@@ -1546,12 +1622,14 @@ public class PDFView extends RelativeLayout {
             PDFView.this.setPageFitPolicy(pageFitPolicy);
             PDFView.this.setPageSnap(pageSnap);
             PDFView.this.setPageFling(pageFling);
+            PDFView.this.setUserId(userId);
 
             if (pageNumbers != null) {
                 PDFView.this.load(documentSource, password, pageNumbers);
             } else {
                 PDFView.this.load(documentSource, password);
             }
+
         }
     }
 
@@ -1560,11 +1638,16 @@ public class PDFView extends RelativeLayout {
      */
 
     private SignaturePad signaturePad;
+    private String userId;
+    private String curEditId;
+    //虚线边框padding
+    private float editLinePadding = 10f;
+    private PdfEditListener pdfEditListener;
 
     /**
      * （新添加方法） 显示签批图层
      */
-    public void showSignView(float penWidth,int penColor){
+    public void setSignaturePad(float penWidth,int penColor,boolean penOnly){
 
         LayoutInflater inflater = LayoutInflater.from(this.getContext());
         View signView = inflater.inflate(R.layout.sign_view,this,false);
@@ -1585,6 +1668,7 @@ public class PDFView extends RelativeLayout {
         this.addView(signView);
         signaturePad = signView.findViewById(R.id.signature_pad);
         setPenWidth(penWidth,penColor);
+        signaturePad.setPenOnly(penOnly);
         signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
             @Override
             public void onStartSigning() {
@@ -1606,6 +1690,26 @@ public class PDFView extends RelativeLayout {
         signaturePad.setMinWidth(width);
         signaturePad.setMaxWidth(width*1.1F);
         signaturePad.setPenColor(penColor);
+    }
+
+    public void showSignView(){
+        if(signaturePad!=null){
+            signaturePad.setVisibility(VISIBLE);
+        }
+    }
+
+    public boolean isSignpagVisible(){
+        if(signaturePad!=null){
+            return signaturePad.getVisibility() == VISIBLE;
+        }
+        return false;
+    }
+
+    public boolean isPenOnly(){
+        if(signaturePad!=null) {
+            return signaturePad.isPenOnly();
+        }
+        return false;
     }
 
     public void hideSignView(){
@@ -1723,9 +1827,63 @@ public class PDFView extends RelativeLayout {
      * @param y
      * @return
      */
-    public Bitmap checkInHandwriteView(float x,float y){
-        cacheManager.getHandwritePart();
+    public boolean checkCanEdit(float x, float y){
+        curEditId = "";
+        List<HandwritingData> dataList = cacheManager.getHandwritePart();
+        if(dataList!=null){
+            for (HandwritingData data:dataList){
+                if(data.getPageNo() == getCurrentPage()){
+                    float localTranslationX;
+                    float localTranslationY;
+                    SizeF size = pdfFile.getPageSize(data.getPageNo());
+                    if (swipeVertical) {
+                        //todo 未考虑这种情况
+                        localTranslationY = pdfFile.getPageOffset(data.getPageNo(), zoom);
+                        float maxWidth = pdfFile.getMaxPageWidth();
+                        localTranslationX = toCurrentScale(maxWidth - size.getWidth()) / 2;
+                    } else {
+                        localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
+                        float maxHeight = pdfFile.getMaxPageHeight();
+                        localTranslationY = toCurrentScale(maxHeight - size.getHeight()) / 2;
+                    }
 
-        return null;
+                    float pointX;
+                    //相对屏幕pdf左上角的坐标
+                    if(currentXOffset<0){
+                        //考虑超出屏幕的偏移量
+                        pointX = -currentXOffset + localTranslationX + x;
+                    }else{
+                        pointX = localTranslationX + x -currentXOffset;
+                    }
+                    float pointY;
+                    if(currentYOffset<0){
+                        //考虑超出屏幕的偏移量
+                        pointY = -currentYOffset + localTranslationY + y;
+                    }else{
+                        pointY = localTranslationY + y - currentYOffset;
+                    }
+
+                    Log.d("touch",pointX + ":" + pointY);
+
+                    boolean minFlag = pointX>data.getPx()*getDisplayWRadio()*zoom&&pointY>data.getPy()*getDisplayHRadio()*zoom;
+                    boolean maxFlag = pointX<(data.getPx()+data.getImageWidth())*getDisplayWRadio()*zoom&&pointY<(data.getPy()+data.getImageHeight())*getDisplayHRadio()*zoom;
+                    if(minFlag&&maxFlag) {
+                        curEditId = data.getId();
+                        redraw();
+                        return true;
+                    }
+                }
+            }
+        }
+        redraw();
+        return false;
+    }
+
+    public void setPdfEditListener(PdfEditListener pdfEditListener) {
+        this.pdfEditListener = pdfEditListener;
+    }
+
+    public interface PdfEditListener{
+        void deleteComment(String id);
     }
 }
