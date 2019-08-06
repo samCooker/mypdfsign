@@ -3,29 +3,35 @@
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" xmlns:fab="http://schemas.android.com/apk/res-auto"
+        android:layout_height="match_parent"
         android:id="@+id/rl_pdf_view"
         android:orientation="vertical"
         tools:context=".SignPdfView">
-
     <com.github.barteksc.pdfviewer.PDFView
             android:background="@color/textBlack"
             android:id="@+id/pdf_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" >
+            android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/pdf_toolbar_height"
+    >
     </com.github.barteksc.pdfviewer.PDFView>
 
-    <com.github.clans.fab.FloatingActionMenu
-            android:id="@+id/action_menu"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:layout_marginBottom="10dp"
-            android:layout_marginEnd="10dp"
-            fab:menu_labels_padding="4dp"
-            fab:menu_colorNormal="@color/pdf_bg_primary"
-            fab:menu_colorPressed="@color/pdf_btn_press_white"
-            fab:menu_colorRipple="@color/pdf_bg"
-    />
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/pdf_toolbar_height"
+            android:background="@drawable/menu_bar"
+            android:elevation="2dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true">
+        <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/ic_arrow_l" android:layout_centerVertical="true" android:layout_alignParentStart="true" android:id="@+id/iv_arrow_left" android:visibility="invisible"/>
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:scrollbars="none">
+            <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:id="@+id/ll_menu_tool">
+            </LinearLayout>
+        </HorizontalScrollView>
+        <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/ic_arrow_r" android:layout_centerVertical="true" android:layout_alignParentRight="true" android:id="@+id/iv_arrow_right" android:visibility="invisible"/>
+    </RelativeLayout>
 </RelativeLayout>

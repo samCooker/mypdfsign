@@ -264,11 +264,9 @@ public class PDFView extends RelativeLayout {
             public void onSelected(ActionSheet actionSheet, String title) {
                 Log.d("actionsheet",title);
                 if("删除".equals(title)){
-                    if(pdfEditListener!=null){
-                        pdfEditListener.deleteComment(curEditId);
-                        actionSheet.dismiss();
-                        curEditId="";
-                    }
+                    callbacks.callonHandwritingDelete(curEditId);
+                    actionSheet.dismiss();
+                    curEditId="";
                 }
             }
         });
@@ -1425,6 +1423,8 @@ public class PDFView extends RelativeLayout {
 
         private OnPageErrorListener onPageErrorListener;
 
+        private OnHandwritingDeleteListener onHandwritingDeleteListener;
+
         private LinkHandler linkHandler = new DefaultLinkHandler(PDFView.this);
 
         private int defaultPage = 0;
@@ -1592,6 +1592,11 @@ public class PDFView extends RelativeLayout {
             return this;
         }
 
+        public Configurator handwritingDeleteListener(OnHandwritingDeleteListener onHandwritingDeleteListener) {
+            this.onHandwritingDeleteListener = onHandwritingDeleteListener;
+            return this;
+        }
+
         public void load() {
             if (!hasSize) {
                 waitingDocumentConfigurator = this;
@@ -1609,6 +1614,7 @@ public class PDFView extends RelativeLayout {
             PDFView.this.callbacks.setOnLongPress(onLongPressListener);
             PDFView.this.callbacks.setOnPageError(onPageErrorListener);
             PDFView.this.callbacks.setLinkHandler(linkHandler);
+            PDFView.this.callbacks.setOnHandwritingDeleteListener(onHandwritingDeleteListener);
             PDFView.this.setSwipeEnabled(enableSwipe);
             PDFView.this.setNightMode(nightMode);
             PDFView.this.enableDoubletap(enableDoubletap);
@@ -1642,7 +1648,6 @@ public class PDFView extends RelativeLayout {
     private String curEditId;
     //虚线边框padding
     private float editLinePadding = 10f;
-    private PdfEditListener pdfEditListener;
 
     /**
      * （新添加方法） 显示签批图层
@@ -1667,8 +1672,7 @@ public class PDFView extends RelativeLayout {
         }
         this.addView(signView);
         signaturePad = signView.findViewById(R.id.signature_pad);
-        setPenWidth(penWidth,penColor);
-        signaturePad.setPenOnly(penOnly);
+        setPenSetting(penWidth,penColor,penOnly);
         signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
             @Override
             public void onStartSigning() {
@@ -1686,10 +1690,11 @@ public class PDFView extends RelativeLayout {
         });
     }
 
-    public void setPenWidth(float width, int penColor){
+    public void setPenSetting(float width, int penColor,boolean penOnly){
         signaturePad.setMinWidth(width);
         signaturePad.setMaxWidth(width*1.1F);
         signaturePad.setPenColor(penColor);
+        signaturePad.setPenOnly(penOnly);
     }
 
     public void showSignView(){
@@ -1879,11 +1884,4 @@ public class PDFView extends RelativeLayout {
         return false;
     }
 
-    public void setPdfEditListener(PdfEditListener pdfEditListener) {
-        this.pdfEditListener = pdfEditListener;
-    }
-
-    public interface PdfEditListener{
-        void deleteComment(String id);
-    }
 }

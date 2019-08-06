@@ -21,11 +21,11 @@ import java.util.concurrent.TimeUnit;
 public class OkHttpUtil {
 
     //设置连接超时时间
-    public final static int CONNECT_TIMEOUT =20;
+    public final static int CONNECT_TIMEOUT =40;
     //设置读取超时时间
-    public final static int READ_TIMEOUT=30;
+    public final static int READ_TIMEOUT=40;
     //设置写的超时时间
-    public final static int WRITE_TIMEOUT=20;
+    public final static int WRITE_TIMEOUT=30;
 
     public static final MediaType CONTENT_TYPE = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
     private OkHttpClient client;

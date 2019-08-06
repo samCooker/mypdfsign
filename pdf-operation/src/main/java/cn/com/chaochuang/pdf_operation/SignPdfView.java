@@ -8,25 +8,32 @@ import android.content.*;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatButton;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
-import android.widget.Toast;
+import android.widget.*;
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
+import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import cn.com.chaochuang.pdf_operation.utils.ImageTools;
 import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
+import cn.com.chaochuang.pdf_operation.utils.MeetingWsListener;
 import com.alibaba.fastjson.JSON;
 import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.OnHandwritingDeleteListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
 import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
-import com.github.clans.fab.FloatingActionButton;
-import com.github.clans.fab.FloatingActionMenu;
 import okhttp3.*;
 
 import java.io.BufferedInputStream;
@@ -34,6 +41,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -53,10 +61,12 @@ public class SignPdfView extends AppCompatActivity {
     private ProgressDialog progressDialog;
 
     private PDFView pdfView;
-    private FloatingActionMenu actionsMenu;
-    private FloatingActionButton handWriteItem,closeViewItem;
+    private LinearLayout actionsMenu;
+    private ImageView arrowLeft,arrowRight;
+    private DisplayMetrics outMetrics = new DisplayMetrics();
 
     private OkHttpUtil httpUtil;
+    private MeetingWsListener meetingWsListener;
     private PdfActionReceiver pdfActionReceiver;
 
     /**
@@ -74,9 +84,17 @@ public class SignPdfView extends AppCompatActivity {
     private int prePage=0;
 
     /**
+     * 会议同步相关
+     */
+    private String webSocketUrl;
+    private String meetingRecordId;
+    private Boolean isHost;
+
+    private AppCompatButton handWriteItem,closeViewItem;
+    /**
      * 手写批注菜单按钮
      */
-    public FloatingActionButton btnClose, btnClear, btnUndo, btnRedo, btnSave, btnPen , btnErase;
+    public AppCompatButton btnClose, btnClear, btnUndo, btnRedo, btnSave, btnPen , btnErase;
 
     private boolean eraseFlag = false;
 
@@ -95,38 +113,37 @@ public class SignPdfView extends AppCompatActivity {
 
         pdfView = findViewById(R.id.pdf_view);
 
-        pdfView.setPdfEditListener(new PDFView.PdfEditListener() {
-            @Override
-            public void deleteComment(final String id) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
-                builder.setMessage("是否删除批注");
-                builder.setTitle("删除");
-                builder.setPositiveButton("确定",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                deleteCommentById(id);
-                            }
-                        });
-                builder.setNegativeButton("取消",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog,int which) {
-                                dialog.dismiss();
-                            }
-                        });
+        //http请求服务
+        httpUtil = new OkHttpUtil(true,serverToken);
 
-                final Dialog dialog = builder.create();
-                dialog.setCancelable(false);
-                dialog.show();
+        //菜单工具栏
+        actionsMenu = findViewById(R.id.ll_menu_tool);
+        arrowLeft = findViewById(R.id.iv_arrow_left);
+        arrowRight = findViewById(R.id.iv_arrow_right);
+        getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
+
+        //会议同步websocket服务
+        if(meetingRecordId!=null) {
+            meetingWsListener = new MeetingWsListener();
+            meetingWsListener.startRunning(this, webSocketUrl + meetingRecordId + "?" + HEADER_TOKEN_NAME + "=" + serverToken);
+
+            if(isHost){
+                //是主持人,显示菜单按钮
+                initMenuBtn();
+            }else{
+                //与会人员
+                initMeetingBtn();
             }
-        });
+        }else{
+            initMenuBtn();
+        }
 
         //加载提示框
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
         progressDialog.setCancelable(false);
-        this.initMenuBtn();
+
+        //广播事件
         this.initBroadcastReceiver();
         //获取权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -157,31 +174,25 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
+    /**
+     * pdf 签批按钮显示
+     */
     private void initMenuBtn() {
-        actionsMenu = findViewById(R.id.action_menu);
         //region 手写批注
-        handWriteItem = new FloatingActionButton(this);
-        handWriteItem.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        handWriteItem.setImageResource(R.drawable.ic_pdf_pen_f);
-        handWriteItem.setColorNormalResId(R.color.pdf_btn_white);
-        handWriteItem.setColorPressedResId(R.color.pdf_btn_press_white);
+        handWriteItem = getMenuButton(getResources().getDrawable(R.drawable.ic_pen),"手 写");
         handWriteItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
                 int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
                 pdfView.setSignaturePad(penWidth,penColor,penOnly);
-                showHandWriteBtns();
+                addHandWriteBtns();
             }
         });
         //endregion
 
         //region 关闭PDF预览页面
-        closeViewItem = new FloatingActionButton(this);
-        closeViewItem.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        closeViewItem.setImageResource(R.drawable.ic_pdf_close_f);
-        closeViewItem.setColorNormalResId(R.color.pdf_btn_white);
-        closeViewItem.setColorPressedResId(R.color.pdf_btn_press_white);
+        closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_close),"关 闭");
         closeViewItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -193,12 +204,7 @@ public class SignPdfView extends AppCompatActivity {
         //-------以下是手写批注的按钮-------
 
         //region 关闭手写页面
-        btnClose = new FloatingActionButton(this);
-        btnClose.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnClose.setImageResource(R.drawable.ic_pdf_back_f);
-        btnClose.setColorNormalResId(R.color.pdf_btn_white);
-        btnClose.setColorPressedResId(R.color.pdf_btn_press_white);
-
+        btnClose = getMenuButton(getResources().getDrawable(R.drawable.ic_exit),"退出手写");
         //region 点击事件
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -212,7 +218,7 @@ public class SignPdfView extends AppCompatActivity {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     pdfView.hideSignView();
-                                    showActionBtns();
+                                    addActionBtns();
                                     Toast.makeText(SignPdfView.this,"已关闭手写批注模式",Toast.LENGTH_SHORT).show();
                                 }
                             });
@@ -229,7 +235,7 @@ public class SignPdfView extends AppCompatActivity {
                     dialog.show();
                 }else{
                     pdfView.hideSignView();
-                    showActionBtns();
+                    addActionBtns();
                 }
 
             }
@@ -238,11 +244,7 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 保存手写签批
-        btnSave = new FloatingActionButton(this);
-        btnSave.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnSave.setImageResource(R.drawable.ic_pdf_save_f);
-        btnSave.setColorNormalResId(R.color.pdf_btn_white);
-        btnSave.setColorPressedResId(R.color.pdf_btn_press_white);
+        btnSave = getMenuButton(getResources().getDrawable(R.drawable.ic_save),"保 存");
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -272,6 +274,7 @@ public class SignPdfView extends AppCompatActivity {
                                 handwritingData.setPageNo(pdfView.getCurrentPage());
                                 handwritingData.setSignerId(userId);
                                 handwritingData.setSignerName(userName);
+                                handwritingData.setSignTime(new Date());
                                 //保存到远程服务器
                                 saveHandwritingData(handwritingData);
                             }else{
@@ -288,11 +291,7 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 手写签批撤销
-        btnUndo = new FloatingActionButton(this);
-        btnUndo.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnUndo.setImageResource(R.drawable.ic_pdf_undo_f);
-        btnUndo.setColorNormalResId(R.color.pdf_btn_white);
-        btnUndo.setColorPressedResId(R.color.pdf_btn_press_white);
+        btnUndo = getMenuButton(getResources().getDrawable(R.drawable.ic_undo),"撤 销");
         btnUndo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -302,11 +301,7 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 手写签批回退
-        btnRedo = new FloatingActionButton(this);
-        btnRedo.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnRedo.setImageResource(R.drawable.ic_pdf_redo_f);
-        btnRedo.setColorNormalResId(R.color.pdf_btn_white);
-        btnRedo.setColorPressedResId(R.color.pdf_btn_press_white);
+        btnRedo = getMenuButton(getResources().getDrawable(R.drawable.ic_redo),"恢 复");
         btnRedo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -316,11 +311,7 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 手写签批清空
-        btnClear = new FloatingActionButton(this);
-        btnClear.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnClear.setImageResource(R.drawable.ic_pdf_delete_f);
-        btnClear.setColorNormalResId(R.color.pdf_btn_white);
-        btnClear.setColorPressedResId(R.color.pdf_btn_press_white);
+        btnClear = getMenuButton(getResources().getDrawable(R.drawable.ic_clear),"清 空");
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -346,56 +337,69 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 设置画笔样式
-        btnPen = new FloatingActionButton(this);
-        btnPen.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnPen.setImageResource(R.drawable.ic_pdf_sign_settings_f);
-        btnPen.setColorNormalResId(R.color.pdf_btn_white);
-        btnPen.setColorPressedResId(R.color.pdf_btn_press_white);
+        btnPen = getMenuButton(getResources().getDrawable(R.drawable.ic_setting),"设 置");
         btnPen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 PenSettingFragment penSettingFragment = new PenSettingFragment();
-                penSettingFragment.showFragmentDlg(getFragmentManager(), "penSettingFragment", new PenSettingFragment.OnSaveListener() {
+                penSettingFragment.showFragmentDlg(getSupportFragmentManager(), "penSettingFragment", new PenSettingFragment.OnSaveListener() {
                     @Override
                     public void onSaveAction() {
                         float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
                         int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
-                        pdfView.setPenWidth(penWidth,penColor);
+                        penOnly = penSettingData.getBoolean(PenSettingFragment.PEN_ONLY,true);
+                        pdfView.setPenSetting(penWidth,penColor,penOnly);
                     }
                 });
             }
         });
         //endregion
 
-        //region 设置画笔样式
-        btnErase = new FloatingActionButton(this);
-        btnErase.setButtonSize(FloatingActionButton.SIZE_NORMAL);
-        btnErase.setImageResource(R.drawable.ic_pdf_erase);
-        btnErase.setColorNormalResId(R.color.pdf_btn_white);
-        btnErase.setColorPressedResId(R.color.pdf_btn_press_white);
+        //region 设置橡皮擦
+        btnErase = getMenuButton(getResources().getDrawable(R.drawable.ic_erase),"橡皮檫");
         btnErase.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                eraseFlag = !eraseFlag;
-                if(eraseFlag) {
-                    Toast.makeText(SignPdfView.this,"已进入橡皮擦模式",Toast.LENGTH_LONG).show();
-                    removeHandWriteBtns();
-                    btnErase.setImageResource(R.drawable.ic_pdf_close_f);
-                    actionsMenu.addMenuButton(btnErase);
-                }else{
-                    Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
-                    btnErase.setImageResource(R.drawable.ic_pdf_erase);
-                    actionsMenu.removeMenuButton(btnErase);
-                    addHandWriteBtns();
-                }
-                pdfView.signEraseMode(eraseFlag);
+//                eraseFlag = !eraseFlag;
+//                if(eraseFlag) {
+//                    Toast.makeText(SignPdfView.this,"已进入橡皮擦模式",Toast.LENGTH_LONG).show();
+//                    removeHandWriteBtns();
+//                    btnErase.setImageResource(R.drawable.ic_pdf_close_f);
+//                    actionsMenu.addMenuButton(btnErase);
+//                }else{
+//                    Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
+//                    btnErase.setImageResource(R.drawable.ic_pdf_erase);
+//                    actionsMenu.removeMenuButton(btnErase);
+//                    addHandWriteBtns();
+//                }
+//                pdfView.signEraseMode(eraseFlag);
             }
         });
         //endregion
+    }
 
-        addActionBtns();
+    /**
+     * 会议同步按钮（与会人员）
+     */
+    private void initMeetingBtn(){
 
+        closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_exit),"退出同步");
+        closeViewItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+    }
+
+    private AppCompatButton getMenuButton(Drawable drawable, String btnName) {
+        AppCompatButton menuButton = new AppCompatButton(this);
+        menuButton.setBackgroundResource(R.drawable.round_buttom);
+        menuButton.setText(btnName);
+        menuButton.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
+        menuButton.setCompoundDrawablesWithIntrinsicBounds(null,drawable,null,null);
+        return menuButton;
     }
 
     /**
@@ -421,11 +425,16 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(Constants.KEY_SERVER_TOKEN)) {
             serverToken = intent.getStringExtra(Constants.KEY_SERVER_TOKEN);
         }
-        if (intent.hasExtra(Constants.KEY_PEN_ONLY)) {
-            penOnly = intent.getBooleanExtra(Constants.KEY_PEN_ONLY,false);
+        penOnly = penSettingData.getBoolean(PenSettingFragment.PEN_ONLY,true);
+        if (intent.hasExtra(Constants.KEY_WEB_SOCKET_URL)) {
+            webSocketUrl = intent.getStringExtra(Constants.KEY_WEB_SOCKET_URL);
         }
-
-        httpUtil = new OkHttpUtil(true,serverToken);
+        if (intent.hasExtra(Constants.KEY_MEETING_REOCRD_ID)) {
+            meetingRecordId = intent.getStringExtra(Constants.KEY_MEETING_REOCRD_ID);
+        }
+        if (intent.hasExtra(Constants.KEY_MEETING_REOCRD_ID)) {
+            isHost = intent.getBooleanExtra(KEY_IS_HOST,false);
+        }
     }
 
 
@@ -438,6 +447,10 @@ public class SignPdfView extends AppCompatActivity {
         IntentFilter hideLoadingFilter = new IntentFilter(BC_HIDE_LOADING);
         IntentFilter resFailureFilter = new IntentFilter(BC_RESPONSE_FAILURE);
         IntentFilter saveSuccessFilter = new IntentFilter(BC_SAVE_HANDWRITING_SUCCESS);
+        IntentFilter deleteSuccessFilter = new IntentFilter(BC_DELETE_HANDWRITING);
+        IntentFilter showTipFilter = new IntentFilter(BC_SHOW_TIP);
+        IntentFilter refreshPdfViewFilter = new IntentFilter(BC_REFRESH_PDF_VIEW);
+        IntentFilter pageChangeFilter = new IntentFilter(BC_CHANGE_PAGE);
 
         registerReceiver(pdfActionReceiver,handwritingListFilter);
         registerReceiver(pdfActionReceiver,resFailureFilter);
@@ -445,6 +458,10 @@ public class SignPdfView extends AppCompatActivity {
         registerReceiver(pdfActionReceiver,showLoadingFilter);
         registerReceiver(pdfActionReceiver,hideLoadingFilter);
         registerReceiver(pdfActionReceiver,saveSuccessFilter);
+        registerReceiver(pdfActionReceiver,deleteSuccessFilter);
+        registerReceiver(pdfActionReceiver,showTipFilter);
+        registerReceiver(pdfActionReceiver,refreshPdfViewFilter);
+        registerReceiver(pdfActionReceiver,pageChangeFilter);
     }
 
     public void openPdfFile(){
@@ -458,6 +475,39 @@ public class SignPdfView extends AppCompatActivity {
                 .spacing(0)
                 .autoSpacing(true)
                 .userData(userId)
+                .onPageChange(new OnPageChangeListener() {
+                    @Override
+                    public void onPageChanged(int page, int pageCount) {
+                        if(meetingWsListener!=null){
+                            meetingWsListener.sendPageChange(WebSocketMessage.TYPE_PAGE_CHANGE,meetingRecordId,page);
+                        }
+                    }
+                })
+                .handwritingDeleteListener(new OnHandwritingDeleteListener() {
+                    @Override
+                    public void onDelete(final String id) {
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                        builder.setMessage("是否删除批注");
+                        builder.setTitle("删除");
+                        builder.setPositiveButton("确定",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        deleteCommentById(id);
+                                    }
+                                });
+                        builder.setNegativeButton("取消",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog,int which) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                        final Dialog dialog = builder.create();
+                        dialog.setCancelable(false);
+                        dialog.show();
+                    }
+                })
                 //宽度自适应（不可修改，修改后插入手写坐标会发生变化）
                 .pageFitPolicy(FitPolicy.WIDTH).load();
     }
@@ -492,7 +542,7 @@ public class SignPdfView extends AppCompatActivity {
                             //添加到图层
                             handwritingData.setId(resData.getData().toString());
                             pdfView.addHandwritingData(handwritingData);
-                            broadcastIntent(BC_SAVE_HANDWRITING_SUCCESS);
+                            broadcastIntent(BC_SAVE_HANDWRITING_SUCCESS,handwritingData.getId());
                         }else{
                             broadcastIntent(BC_RESPONSE_FAILURE);
                         }
@@ -505,8 +555,31 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
+    /**
+     * 添加一个手写签批到屏幕上显示
+     * @param handwritingData
+     */
+    public void addHandwritingData(HandwritingData handwritingData) {
+        if(handwritingData.getBase64Code()!=null&&!"".equals(handwritingData.getBase64Code().trim())){
+            Bitmap bitmap = ImageTools.base64ToBitmap(handwritingData.getBase64Code());
+            handwritingData.setImageBitmap(bitmap);
+        }
+        pdfView.addHandwritingData(handwritingData);
+        broadcastIntent(BC_REFRESH_PDF_VIEW);
+    }
+
+    public void removeHandwritingData(String id){
+        pdfView.removeHandwritingData(id);
+        broadcastIntent(BC_REFRESH_PDF_VIEW);
+    }
+
+    public void jumpToPage(int page){
+        pdfView.jumpTo(page,true);
+    }
+
     private void deleteCommentById(final String id){
         if(id!=null){
+            broadcastIntent(BC_SHOW_LOADING,"正在删除");
             httpUtil.get(serverUrl + URL_HANDWRITING_DELETE + "?id="+id, new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
@@ -519,9 +592,7 @@ public class SignPdfView extends AppCompatActivity {
                         String data = response.body().string();
                         AppResponse resData = JSON.parseObject(data, AppResponse.class);
                         if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())){
-                            pdfView.removeHandwritingData(id);
-                            pdfView.invalidate();
-                            broadcastIntent(BC_RESPONSE_SUCCESS);
+                            broadcastIntent(BC_DELETE_HANDWRITING,id);
                         }else{
                             broadcastIntent(BC_RESPONSE_FAILURE);
                         }
@@ -667,55 +738,50 @@ public class SignPdfView extends AppCompatActivity {
     }
 
     /**
-     * 显示手写批注按钮，去除主菜单按钮
-     */
-    private void showHandWriteBtns() {
-        removeActionBtns();
-        addHandWriteBtns();
-    }
-
-    private void showActionBtns(){
-        removeHandWriteBtns();
-        addActionBtns();
-    }
-
-
-    /**
      * 显示主菜单按钮
      */
     private void addActionBtns(){
-        actionsMenu.addMenuButton(handWriteItem);
-        actionsMenu.addMenuButton(closeViewItem);
-    }
+        actionsMenu.removeAllViews();
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+        layoutParams.gravity = Gravity.CENTER;
+        actionsMenu.setLayoutParams(layoutParams);
+        arrowLeft.setVisibility(View.INVISIBLE);
+        arrowRight.setVisibility(View.INVISIBLE);
 
-    /**
-     * 去除主菜单按钮
-     */
-    private void removeActionBtns(){
-        actionsMenu.removeMenuButton(handWriteItem);
-        actionsMenu.removeMenuButton(closeViewItem);
+        if(meetingRecordId!=null&&!isHost){
+            //会议模式(与会人员)
+            actionsMenu.addView(closeViewItem);
+        }else{
+            actionsMenu.addView(handWriteItem);
+            actionsMenu.addView(closeViewItem);
+        }
     }
 
     /**
      * 显示手写批注按钮
      */
     private void addHandWriteBtns(){
-        actionsMenu.addMenuButton(btnSave);
-        actionsMenu.addMenuButton(btnPen);
-        actionsMenu.addMenuButton(btnUndo);
-        actionsMenu.addMenuButton(btnRedo);
+        actionsMenu.removeAllViews();
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+
+        if(handWriteItem.getWidth()*6>outMetrics.widthPixels){
+            arrowLeft.setVisibility(View.VISIBLE);
+            arrowRight.setVisibility(View.VISIBLE);
+            layoutParams.gravity = Gravity.START;
+        }else{
+            arrowLeft.setVisibility(View.INVISIBLE);
+            arrowRight.setVisibility(View.INVISIBLE);
+            layoutParams.gravity = Gravity.CENTER;
+        }
+
+        actionsMenu.setLayoutParams(layoutParams);
+        actionsMenu.addView(btnClose);
+        actionsMenu.addView(btnSave);
+        actionsMenu.addView(btnUndo);
+        actionsMenu.addView(btnRedo);
 //        actionsMenu.addMenuButton(btnErase);
-        actionsMenu.addMenuButton(btnClear);
-        actionsMenu.addMenuButton(btnClose);
-    }
-    private void removeHandWriteBtns(){
-        actionsMenu.removeMenuButton(btnSave);
-        actionsMenu.removeMenuButton(btnPen);
-        actionsMenu.removeMenuButton(btnUndo);
-        actionsMenu.removeMenuButton(btnRedo);
-//        actionsMenu.removeMenuButton(btnErase);
-        actionsMenu.removeMenuButton(btnClear);
-        actionsMenu.removeMenuButton(btnClose);
+        actionsMenu.addView(btnClear);
+        actionsMenu.addView(btnPen);
     }
 
     private void showProgressDialog(){
@@ -760,7 +826,7 @@ public class SignPdfView extends AppCompatActivity {
             }
             switch (action){
                 case BC_SHOW_LOADING:
-                    showProgressDialog();
+                    showProgressDialog(msg);
                     break;
                 case BC_HIDE_LOADING:
                     hideProgressDialog();
@@ -770,15 +836,13 @@ public class SignPdfView extends AppCompatActivity {
                     List<HandwritingData> dataList = httpUtil.getCommentDataList();
                     if(dataList!=null){
                         for (HandwritingData dataBean:dataList){
-                            if(dataBean.getBase64Code()!=null){
-                                Bitmap bitmap = ImageTools.base64ToBitmap(dataBean.getBase64Code());
-                                dataBean.setImageBitmap(bitmap);
-                                pdfView.addHandwritingData(dataBean);
-                            }
+                            addHandwritingData(dataBean);
                         }
                     }
                     //打开PDF文件
                     openPdfFile();
+                    //显示按钮
+                    addActionBtns();
                     break;
                 case BC_RESPONSE_FAILURE:
                     hideProgressDialog();
@@ -796,9 +860,48 @@ public class SignPdfView extends AppCompatActivity {
                     break;
                 case BC_SAVE_HANDWRITING_SUCCESS:
                     hideProgressDialog();
+                    //刷新页面
                     pdfView.invalidate();
                     pdfView.signClear();
                     Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
+                    if(meetingWsListener!=null){
+                        //同步模式
+                        meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_ADD,meetingRecordId,msg);
+                    }
+                    break;
+                case BC_DELETE_HANDWRITING:
+                    hideProgressDialog();
+                    removeHandwritingData(msg);
+                    if(meetingWsListener!=null){
+                        //同步模式
+                        meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_DELETE,meetingRecordId,msg);
+                    }
+                    break;
+                case BC_SHOW_TIP:
+                    Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                    builder.setMessage(msg);
+                    builder.setTitle("提示信息");
+                    builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+                    final Dialog dialog = builder.create();
+                    dialog.setCancelable(false);
+                    dialog.show();
+                    break;
+                case BC_REFRESH_PDF_VIEW:
+                    if(pdfView!=null){
+                        pdfView.invalidate();
+                    }
+                    break;
+                case BC_CHANGE_PAGE:
+                    int page = intent.getIntExtra(KEY_PDF_PAGE,0);
+                    if(pdfView!=null) {
+                        pdfView.jumpTo(page, true);
+                    }
                     break;
                 default:
             }

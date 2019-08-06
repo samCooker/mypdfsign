@@ -5,8 +5,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical" >
 
-    <!-- 预览图 -->
-
     <RelativeLayout
         android:layout_width="fill_parent"
         android:layout_height="110dp"
@@ -20,11 +18,11 @@
             android:background="@android:color/black" />
     </RelativeLayout>
 
-    <!-- 宽度设置 -->
 
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:padding="10dp"
         android:gravity="center" >
 
         <TextView
@@ -38,6 +36,18 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:padding="5dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+            android:padding="10dp"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+        <Switch
+                android:text="手写笔输入"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/sw_pen_only"/>
     </LinearLayout>
     
     <GridView

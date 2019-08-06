@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.*;
@@ -23,6 +24,7 @@ public class PenSettingFragment extends DialogFragment {
 
     public static final String PEN_WIDTH="penMaxSize";
     public static final String PEN_COLOR="penColor";
+    public static final String PEN_ONLY="penOnly";
     public static final String PEN_SETTING_DATA = "pen_info";
 
     private SharedPreferences penSettingData;
@@ -39,12 +41,14 @@ public class PenSettingFragment extends DialogFragment {
     private SeekBar penTypeBar;
     private TextView penWidthTv;
     private TextView previewWidthTv;
+    private Switch penOnlySwitch;
 
     private int penMaxWidth = 30;
     private int penMinWidth = 1;
     public static int defaultWidth = 2;
     private float penWidth;
     private int penColor;
+    private boolean penOnlyFlag;
 
 
     @TargetApi(23)
@@ -87,6 +91,7 @@ public class PenSettingFragment extends DialogFragment {
                 SharedPreferences.Editor editor = penSettingData.edit();
                 editor.putFloat(PEN_WIDTH,penWidth);
                 editor.putInt(PEN_COLOR,penColor);
+                editor.putBoolean(PEN_ONLY,penOnlyFlag);
                 if(editor.commit()&&onSaveListener!=null){
                     onSaveListener.onSaveAction();
                 }else{
@@ -125,6 +130,7 @@ public class PenSettingFragment extends DialogFragment {
         if(penSettingData!=null) {
             penWidth = penSettingData.getFloat(PEN_WIDTH, defaultWidth);
             penColor = penSettingData.getInt(PEN_COLOR, Color.BLACK);
+            penOnlyFlag = penSettingData.getBoolean(PEN_ONLY,true);
         }else{
             penWidth = defaultWidth;
             penColor = Color.BLACK;
@@ -135,6 +141,15 @@ public class PenSettingFragment extends DialogFragment {
         linearParams.height = (int) (penWidth*settingContent.getResources().getDisplayMetrics().density);
         previewWidthTv.setLayoutParams(linearParams);
         previewWidthTv.setBackgroundColor(penColor);
+
+        penOnlySwitch = settingContent.findViewById(R.id.sw_pen_only);
+        penOnlySwitch.setChecked(penOnlyFlag);
+        penOnlySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                penOnlyFlag = isChecked;
+            }
+        });
 
         penColorGv = settingContent.findViewById(R.id.gv_pen_color);
         penColorAdaptor = new PenColorAdaptor(context);
@@ -158,10 +173,10 @@ public class PenSettingFragment extends DialogFragment {
         penTypeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                linearParams.height = progress;
                 previewWidthTv.setLayoutParams(linearParams);
                 // 使设置好的布局参数应用到控件
                 penWidth = progress+penMinWidth;
+                linearParams.height = (int) (penWidth*settingContent.getResources().getDisplayMetrics().density);
                 penWidthTv.setText("宽度：" +(progress+penMinWidth));
             }
 
@@ -177,7 +192,7 @@ public class PenSettingFragment extends DialogFragment {
         });
     }
 
-    public void showFragmentDlg(FragmentManager fragmentManager, String tag,OnSaveListener onSaveListener){
+    public void showFragmentDlg(android.support.v4.app.FragmentManager fragmentManager, String tag, OnSaveListener onSaveListener){
         this.show(fragmentManager,tag);
         this.onSaveListener = onSaveListener;
     }

@@ -164,7 +164,9 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     @Override
-    public boolean onSingleTapUp(MotionEvent e) {
+    public boolean onSingleTapUp(MotionEvent event) {
+        //是否显示批注详情
+        pdfView.checkCanEdit(event.getX(),event.getY());
         return false;
     }
 
@@ -286,24 +288,21 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         if (!enabled) {
             return false;
         }
-
-        pdfView.checkCanEdit(event.getX(),event.getY());
-
         boolean retVal = scaleGestureDetector.onTouchEvent(event);
         retVal = gestureDetector.onTouchEvent(event) || retVal;
 
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
-                pdfView.hideSignView();
-            }
+//            if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
+//                pdfView.hideSignView();
+//            }
         }else if (event.getAction() == MotionEvent.ACTION_UP) {
             if (scrolling) {
                 scrolling = false;
                 onScrollEnd(event);
             }
-            if(pdfView.isPenOnly()&&!pdfView.isSignpagVisible()){
-                pdfView.showSignView();
-            }
+//            if(pdfView.isPenOnly()&&!pdfView.isSignpagVisible()){
+//                pdfView.showSignView();
+//            }
         }
         return retVal;
     }

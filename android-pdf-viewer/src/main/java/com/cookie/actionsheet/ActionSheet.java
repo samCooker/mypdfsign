@@ -146,8 +146,8 @@ public class ActionSheet {
 
         // Points SheetView to the center of its anchor view
         contentView.measure(contentView.getWidth(), ViewGroup.LayoutParams.WRAP_CONTENT);
-        int xPoint = (int)(viewRect.left + (viewRect.right-viewRect.left) / 2.0f - contentView.getMeasuredWidth()/2); // left
-        int yPoint = (int)(viewRect.top - contentView.getMeasuredHeight()); // top
+        int xPoint = (int)(viewRect.left + (viewRect.right-viewRect.left) / 2f - contentView.getMeasuredWidth()/2); // left
+        int yPoint = (int)(viewRect.top + (viewRect.bottom-viewRect.top) / 2f- contentView.getMeasuredHeight()/2); // top
 
         // Makes sure that action sheet is always shown inside screen.
         if (yPoint <= ViewUtils.getStatusBarHeight(context)) {
