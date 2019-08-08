@@ -7,6 +7,7 @@ import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
 import com.alibaba.fastjson.JSON;
 import com.github.barteksc.pdfviewer.model.HandwritingData;
 import okhttp3.*;
+import okio.ByteString;
 
 import java.util.concurrent.TimeUnit;
 
@@ -71,7 +72,7 @@ public class MeetingWsListener extends WebSocketListener {
                 break;
             case WebSocketMessage.TYPE_ERROR_CONN:
                 if(signPdfView!=null){
-                    signPdfView.broadcastIntent(Constants.BC_SHOW_TIP,messageInfo.getMessageData());
+                    signPdfView.broadcastIntent(Constants.BC_SHOW_TIP,"服务连接错误");
                 }
                 break;
             default:
@@ -109,12 +110,8 @@ public class MeetingWsListener extends WebSocketListener {
         }
     }
 
-    public void sendPageChange(String type,String meetingRecordId,int pageNo){
+    public void sendMessage(WebSocketMessage webSocketMessage){
         if(socketClient!=null) {
-            WebSocketMessage webSocketMessage = new WebSocketMessage();
-            webSocketMessage.setPageNo(pageNo);
-            webSocketMessage.setMessageType(type);
-            webSocketMessage.setRecordId(meetingRecordId);
             socketClient.send(JSON.toJSONString(webSocketMessage));
         }
     }

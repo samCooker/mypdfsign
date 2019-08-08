@@ -1,4 +1,4 @@
-package cn.com.chaochuang.pdf_operation;
+package cn.com.chaochuang.pdf_operation.ui;
 
 import android.annotation.TargetApi;
 import android.app.*;
@@ -12,7 +12,8 @@ import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.*;
-import cn.com.chaochuang.pdf_operation.utils.PenColorAdaptor;
+import cn.com.chaochuang.pdf_operation.R;
+import cn.com.chaochuang.pdf_operation.model.PenColorAdaptor;
 
 /**
  * 2018-5-9

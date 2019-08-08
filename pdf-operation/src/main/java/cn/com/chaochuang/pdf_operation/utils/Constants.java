@@ -35,6 +35,7 @@ public class Constants {
     public static final String URL_HANDWRITING_DELETE ="handwriting/delete.mo";
     public static final String URL_GET_MD5 ="handwriting/getmdf.mo";
     public static final String URL_DOWNLOAD_FILE ="handwriting/download.mo";
+    public static final String URL_FIND_MEETING_MEMBERS ="wsdata/meeting/members.mo";
 
     public static final String BC_HANDWRITING_LIST="handwritingList";
     public static final String BC_SHOW_TIP ="showTip";

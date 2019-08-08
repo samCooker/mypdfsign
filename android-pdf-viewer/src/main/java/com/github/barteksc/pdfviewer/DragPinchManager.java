@@ -257,6 +257,9 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
+        if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
+            return false;
+        }
         float dr = detector.getScaleFactor();
         float wantedZoom = pdfView.getZoom() * dr;
         if (wantedZoom < MINIMUM_ZOOM) {

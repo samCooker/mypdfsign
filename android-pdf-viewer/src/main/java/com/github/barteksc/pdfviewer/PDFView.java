@@ -1692,7 +1692,7 @@ public class PDFView extends RelativeLayout {
 
     public void setPenSetting(float width, int penColor,boolean penOnly){
         signaturePad.setMinWidth(width);
-        signaturePad.setMaxWidth(width*1.1F);
+        signaturePad.setMaxWidth(width+4F);
         signaturePad.setPenColor(penColor);
         signaturePad.setPenOnly(penOnly);
     }

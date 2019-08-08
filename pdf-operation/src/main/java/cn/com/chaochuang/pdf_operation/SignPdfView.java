@@ -13,6 +13,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.ListFragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatButton;
@@ -23,7 +25,11 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
+import cn.com.chaochuang.pdf_operation.model.MeetingMemberAdaptor;
+import cn.com.chaochuang.pdf_operation.model.MeetingMemberData;
 import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
+import cn.com.chaochuang.pdf_operation.ui.MeetingMemberFragment;
+import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import cn.com.chaochuang.pdf_operation.utils.ImageTools;
 import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
@@ -90,7 +96,7 @@ public class SignPdfView extends AppCompatActivity {
     private String meetingRecordId;
     private Boolean isHost;
 
-    private AppCompatButton handWriteItem,closeViewItem;
+    private AppCompatButton handWriteItem,closeViewItem,meetingMemItem;
     /**
      * 手写批注菜单按钮
      */
@@ -123,7 +129,7 @@ public class SignPdfView extends AppCompatActivity {
         getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
 
         //会议同步websocket服务
-        if(meetingRecordId!=null) {
+        if(meetingRecordId!=null&&!"".equals(meetingRecordId.trim())&&webSocketUrl!=null&&!"".equals(webSocketUrl.trim())) {
             meetingWsListener = new MeetingWsListener();
             meetingWsListener.startRunning(this, webSocketUrl + meetingRecordId + "?" + HEADER_TOKEN_NAME + "=" + serverToken);
 
@@ -361,22 +367,64 @@ public class SignPdfView extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-//                eraseFlag = !eraseFlag;
-//                if(eraseFlag) {
-//                    Toast.makeText(SignPdfView.this,"已进入橡皮擦模式",Toast.LENGTH_LONG).show();
-//                    removeHandWriteBtns();
-//                    btnErase.setImageResource(R.drawable.ic_pdf_close_f);
-//                    actionsMenu.addMenuButton(btnErase);
-//                }else{
-//                    Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
-//                    btnErase.setImageResource(R.drawable.ic_pdf_erase);
-//                    actionsMenu.removeMenuButton(btnErase);
-//                    addHandWriteBtns();
-//                }
-//                pdfView.signEraseMode(eraseFlag);
+                eraseFlag = !eraseFlag;
+                if(eraseFlag) {
+                    Toast.makeText(SignPdfView.this,"已进入橡皮擦模式",Toast.LENGTH_LONG).show();
+                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null,getResources().getDrawable(R.drawable.ic_close),null,null);
+                    btnErase.setText("退出橡皮擦模式");
+                    actionsMenu.removeAllViews();
+                    actionsMenu.addView(btnErase);
+                }else{
+                    Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
+                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null,getResources().getDrawable(R.drawable.ic_erase),null,null);
+                    btnErase.setText("橡皮檫");
+                    addHandWriteBtns();
+                }
+                pdfView.signEraseMode(eraseFlag);
             }
         });
         //endregion
+
+        if(meetingWsListener!=null&&isHost){
+            meetingMemItem = getMenuButton(getResources().getDrawable(R.drawable.ic_people),"与会人员");
+            meetingMemItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    httpUtil.get(serverUrl + URL_FIND_MEETING_MEMBERS + "?recordId=" + meetingRecordId, new Callback() {
+                        @Override
+                        public void onFailure(Call call, IOException e) {
+                            broadcastIntent(BC_RESPONSE_FAILURE);
+                        }
+
+                        @Override
+                        public void onResponse(Call call, Response response) throws IOException {
+                            if(response.isSuccessful()&&response.body()!=null) {
+                                String data = response.body().string();
+                                AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                                if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())&&resData.getData()!=null){
+                                    final List<MeetingMemberData> memberDataList = JSON.parseArray(resData.getData().toString(),MeetingMemberData.class);
+                                    SignPdfView.this.runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            MeetingMemberFragment fragment = new MeetingMemberFragment();
+                                            MeetingMemberAdaptor adaptor = new MeetingMemberAdaptor(getApplicationContext(),memberDataList);
+                                            fragment.showFragmentDlg(getSupportFragmentManager(),"meetingMemberList",adaptor);
+
+
+                                        }
+                                    });
+                                }else{
+                                    broadcastIntent(BC_RESPONSE_FAILURE);
+                                }
+
+                            }else {
+                                broadcastIntent(BC_RESPONSE_FAILURE);
+                            }
+                        }
+                    });
+                }
+            });
+        }
     }
 
     /**
@@ -478,8 +526,12 @@ public class SignPdfView extends AppCompatActivity {
                 .onPageChange(new OnPageChangeListener() {
                     @Override
                     public void onPageChanged(int page, int pageCount) {
-                        if(meetingWsListener!=null){
-                            meetingWsListener.sendPageChange(WebSocketMessage.TYPE_PAGE_CHANGE,meetingRecordId,page);
+                        if(meetingWsListener!=null&&isHost){
+                            WebSocketMessage webSocketMessage = new WebSocketMessage();
+                            webSocketMessage.setPageNo(page);
+                            webSocketMessage.setMessageType(WebSocketMessage.TYPE_PAGE_CHANGE);
+                            webSocketMessage.setRecordId(meetingRecordId);
+                            meetingWsListener.sendMessage(webSocketMessage);
                         }
                     }
                 })
@@ -751,6 +803,13 @@ public class SignPdfView extends AppCompatActivity {
         if(meetingRecordId!=null&&!isHost){
             //会议模式(与会人员)
             actionsMenu.addView(closeViewItem);
+        }else if(meetingRecordId!=null){
+            //会议模式（主持人）
+            actionsMenu.addView(handWriteItem);
+            if(meetingMemItem!=null){
+                actionsMenu.addView(meetingMemItem);
+            }
+            actionsMenu.addView(closeViewItem);
         }else{
             actionsMenu.addView(handWriteItem);
             actionsMenu.addView(closeViewItem);
@@ -779,7 +838,7 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.addView(btnSave);
         actionsMenu.addView(btnUndo);
         actionsMenu.addView(btnRedo);
-//        actionsMenu.addMenuButton(btnErase);
+//        actionsMenu.addView(btnErase);
         actionsMenu.addView(btnClear);
         actionsMenu.addView(btnPen);
     }
@@ -864,7 +923,7 @@ public class SignPdfView extends AppCompatActivity {
                     pdfView.invalidate();
                     pdfView.signClear();
                     Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
-                    if(meetingWsListener!=null){
+                    if(meetingWsListener!=null&&isHost){
                         //同步模式
                         meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_ADD,meetingRecordId,msg);
                     }
@@ -872,7 +931,7 @@ public class SignPdfView extends AppCompatActivity {
                 case BC_DELETE_HANDWRITING:
                     hideProgressDialog();
                     removeHandwritingData(msg);
-                    if(meetingWsListener!=null){
+                    if(meetingWsListener!=null&&isHost){
                         //同步模式
                         meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_DELETE,meetingRecordId,msg);
                     }
