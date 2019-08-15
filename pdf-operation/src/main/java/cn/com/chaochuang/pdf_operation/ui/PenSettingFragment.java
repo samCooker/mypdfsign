@@ -46,7 +46,7 @@ public class PenSettingFragment extends DialogFragment {
 
     private int penMaxWidth = 30;
     private int penMinWidth = 1;
-    public static int defaultWidth = 2;
+    public static int defaultWidth = 10;
     private float penWidth;
     private int penColor;
     private boolean penOnlyFlag;
@@ -139,7 +139,7 @@ public class PenSettingFragment extends DialogFragment {
 
         previewWidthTv = settingContent.findViewById(R.id.tv_width_preview);
         final RelativeLayout.LayoutParams linearParams = (RelativeLayout.LayoutParams) previewWidthTv.getLayoutParams();
-        linearParams.height = (int) (penWidth*settingContent.getResources().getDisplayMetrics().density);
+        linearParams.height = (int) (penWidth);
         previewWidthTv.setLayoutParams(linearParams);
         previewWidthTv.setBackgroundColor(penColor);
 
@@ -177,7 +177,7 @@ public class PenSettingFragment extends DialogFragment {
                 previewWidthTv.setLayoutParams(linearParams);
                 // 使设置好的布局参数应用到控件
                 penWidth = progress+penMinWidth;
-                linearParams.height = (int) (penWidth*settingContent.getResources().getDisplayMetrics().density);
+                linearParams.height = (int) (penWidth);
                 penWidthTv.setText("宽度：" +(progress+penMinWidth));
             }
 

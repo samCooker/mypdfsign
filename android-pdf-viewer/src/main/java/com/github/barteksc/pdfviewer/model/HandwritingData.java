@@ -40,6 +40,12 @@ public class HandwritingData {
     private String signerName;
     private Date signTime;
 
+    /**
+     *  屏幕上图片的原坐标
+     */
+    private float signX;
+    private float signY;
+
     public String getId() {
         return id;
     }
@@ -150,5 +156,21 @@ public class HandwritingData {
 
     public void setFileId(String fileId) {
         this.fileId = fileId;
+    }
+
+    public float getSignX() {
+        return signX;
+    }
+
+    public void setSignX(float signX) {
+        this.signX = signX;
+    }
+
+    public float getSignY() {
+        return signY;
+    }
+
+    public void setSignY(float signY) {
+        this.signY = signY;
     }
 }

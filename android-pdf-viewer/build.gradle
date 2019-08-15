@@ -50,13 +50,13 @@ buildscript {
 }
 
 dependencies {
-    api fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    api fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:support-compat:28.0.0'
 
 
-    implementation project(path: ':signature-pad')
     implementation project(path: ':android-pdfium')
     implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation project(path: ':writingpen')
 
 }
 

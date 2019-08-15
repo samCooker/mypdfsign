@@ -23,11 +23,16 @@ public class WebSocketMessage {
     public static final String TYPE_REPEAT_CONN = "connectionRepeat";
     public static final String TYPE_FINISH_CONN = "connectionFinish";
     public static final String TYPE_ERROR_CONN = "connectionError";
+    public static final String TYPE_SCROLL_TO = "fileScrollTo";
 
     private String messageType;
     private String messageData;
     private String recordId;
     private Integer pageNo;
+
+    private Float zoom;
+    private Float offsetX;
+    private Float offsetY;
 
     public String getMessageType() {
         return messageType;
@@ -59,6 +64,30 @@ public class WebSocketMessage {
 
     public void setPageNo(Integer pageNo) {
         this.pageNo = pageNo;
+    }
+
+    public Float getZoom() {
+        return zoom;
+    }
+
+    public void setZoom(Float zoom) {
+        this.zoom = zoom;
+    }
+
+    public Float getOffsetX() {
+        return offsetX;
+    }
+
+    public void setOffsetX(Float offsetX) {
+        this.offsetX = offsetX;
+    }
+
+    public Float getOffsetY() {
+        return offsetY;
+    }
+
+    public void setOffsetY(Float offsetY) {
+        this.offsetY = offsetY;
     }
 }
 

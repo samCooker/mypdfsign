@@ -3,8 +3,14 @@
              android:layout_width="match_parent"
              android:layout_height="match_parent">
 
-    <com.github.gcacace.signaturepad.views.SignaturePad
+    <!--<com.github.gcacace.signaturepad.views.SignaturePad-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:id="@+id/signature_pad" />-->
+
+    <cn.com.chaochuang.writingpen.ui.DrawPenView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/signature_pad" />
+            android:id="@+id/view_handwriting"
+    />
 </LinearLayout>

@@ -20,13 +20,7 @@ import android.content.Context;
 import android.graphics.Rect;
 import android.view.View;
 
-/**
- * Created by Quang Nguyen on 3/16/17.
- *
- * Contains utility methods which are related to Android views and device screens
- */
-
-class ViewUtils {
+public class ViewUtils {
 
     //Find the location of a view in app screen
     public static Rect locateView(View v) {

@@ -13,8 +13,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.app.ListFragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatButton;
@@ -23,17 +21,19 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.*;
-import cn.com.chaochuang.pdf_operation.model.AppResponse;
-import cn.com.chaochuang.pdf_operation.model.MeetingMemberAdaptor;
-import cn.com.chaochuang.pdf_operation.model.MeetingMemberData;
-import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
+import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import cn.com.chaochuang.pdf_operation.model.*;
+import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
 import cn.com.chaochuang.pdf_operation.ui.MeetingMemberFragment;
 import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import cn.com.chaochuang.pdf_operation.utils.ImageTools;
-import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
 import cn.com.chaochuang.pdf_operation.utils.MeetingWsListener;
+import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.OnHandwritingDeleteListener;
@@ -65,6 +65,7 @@ public class SignPdfView extends AppCompatActivity {
     private static final String TAG = SignPdfView.class.getSimpleName();
 
     private ProgressDialog progressDialog;
+    private JumpToFragment jumpToFragment;
 
     private PDFView pdfView;
     private LinearLayout actionsMenu;
@@ -87,7 +88,7 @@ public class SignPdfView extends AppCompatActivity {
     private String userId;
     private String userName;
     private Boolean penOnly;
-    private int prePage=0;
+    private int currentPage=0;
 
     /**
      * 会议同步相关
@@ -96,11 +97,11 @@ public class SignPdfView extends AppCompatActivity {
     private String meetingRecordId;
     private Boolean isHost;
 
-    private AppCompatButton handWriteItem,closeViewItem,meetingMemItem;
+    private AppCompatButton handWriteItem,closeViewItem,meetingMemItem,jumpToItem;
     /**
      * 手写批注菜单按钮
      */
-    public AppCompatButton btnClose, btnClear, btnUndo, btnRedo, btnSave, btnPen , btnErase;
+    private AppCompatButton btnClose, btnClear, btnUndo, btnRedo, btnSave, btnPen , btnErase;
 
     private boolean eraseFlag = false;
 
@@ -139,6 +140,7 @@ public class SignPdfView extends AppCompatActivity {
             }else{
                 //与会人员
                 initMeetingBtn();
+                pdfView.setNotChangePage(true);
             }
         }else{
             initMenuBtn();
@@ -149,8 +151,19 @@ public class SignPdfView extends AppCompatActivity {
         progressDialog.setMessage("正在加载");
         progressDialog.setCancelable(false);
 
+        //dialog
+        jumpToFragment = new JumpToFragment();
+        jumpToFragment.setOnJumpToListener(new JumpToFragment.OnJumpToListener() {
+            @Override
+            public void jumpTo(int page) {
+                pdfView.jumpTo(page-1,true);
+            }
+        });
+
         //广播事件
         this.initBroadcastReceiver();
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         //获取权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String[] permissions = new String[]{
@@ -215,7 +228,7 @@ public class SignPdfView extends AppCompatActivity {
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!pdfView.isHandwritingEmpty()){
+                if(pdfView.hasHandwriting()){
                     final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
                     builder.setMessage("有未保存的手写内容，是否退出");
                     builder.setTitle("退出手写模式");
@@ -254,22 +267,21 @@ public class SignPdfView extends AppCompatActivity {
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!pdfView.isHandwritingEmpty()){
-                    showProgressDialog("正在保存");
+                if(pdfView.hasHandwriting()){
+                    broadcastIntent(BC_SHOW_LOADING,"正在保存");
                     new Thread(){
                         @Override
                         public void run() {
-                            Bitmap bim = pdfView.getSignBitmap();
+                            HandwritingData handwritingData = pdfView.getSignBitmap();
                             float wr = pdfView.getDisplayWRadio();
                             float hr = pdfView.getDisplayHRadio();
-                            if (bim != null) {
-                                float x = pdfView.getSignX();
-                                float y = pdfView.getSignY();
+                            if (handwritingData!=null&&handwritingData.getImageBitmap() != null) {
+                                float x = handwritingData.getSignX();
+                                float y = handwritingData.getSignY();
                                 //获取没有放大或缩小的图片数据
-                                Bitmap originBitmap = ImageTools.scaleBitmap(bim,1/pdfView.getZoom());
+                                Bitmap originBitmap = ImageTools.scaleBitmap(handwritingData.getImageBitmap(),1/pdfView.getZoom());
                                 float width = originBitmap.getWidth() / wr;
                                 float height = originBitmap.getHeight() / hr;
-                                HandwritingData handwritingData = new HandwritingData();
                                 handwritingData.setPx(x/wr);
                                 handwritingData.setPy(y/hr);
                                 handwritingData.setImageWidth(width);
@@ -297,23 +309,23 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 手写签批撤销
-        btnUndo = getMenuButton(getResources().getDrawable(R.drawable.ic_undo),"撤 销");
-        btnUndo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pdfView.signUndo();
-            }
-        });
+//        btnUndo = getMenuButton(getResources().getDrawable(R.drawable.ic_undo),"撤 销");
+//        btnUndo.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                pdfView.signUndo();
+//            }
+//        });
         //endregion
 
         //region 手写签批回退
-        btnRedo = getMenuButton(getResources().getDrawable(R.drawable.ic_redo),"恢 复");
-        btnRedo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pdfView.signRedo();
-            }
-        });
+//        btnRedo = getMenuButton(getResources().getDrawable(R.drawable.ic_redo),"恢 复");
+//        btnRedo.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                pdfView.signRedo();
+//            }
+//        });
         //endregion
 
         //region 手写签批清空
@@ -425,6 +437,14 @@ public class SignPdfView extends AppCompatActivity {
                 }
             });
         }
+
+        jumpToItem = getMenuButton(getResources().getDrawable(R.drawable.ic_jump_to),"跳转到");
+        jumpToItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                jumpToFragment.showFragmentDlg(getSupportFragmentManager(),"PdfJumpToFragment",pdfView.getCurrentPage()+1,pdfView.getPageCount());
+            }
+        });
     }
 
     /**
@@ -483,6 +503,9 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(Constants.KEY_MEETING_REOCRD_ID)) {
             isHost = intent.getBooleanExtra(KEY_IS_HOST,false);
         }
+        if (intent.hasExtra(KEY_CURRENT_PAGE)) {
+            currentPage = intent.getIntExtra(KEY_CURRENT_PAGE,0);
+        }
     }
 
 
@@ -498,7 +521,6 @@ public class SignPdfView extends AppCompatActivity {
         IntentFilter deleteSuccessFilter = new IntentFilter(BC_DELETE_HANDWRITING);
         IntentFilter showTipFilter = new IntentFilter(BC_SHOW_TIP);
         IntentFilter refreshPdfViewFilter = new IntentFilter(BC_REFRESH_PDF_VIEW);
-        IntentFilter pageChangeFilter = new IntentFilter(BC_CHANGE_PAGE);
 
         registerReceiver(pdfActionReceiver,handwritingListFilter);
         registerReceiver(pdfActionReceiver,resFailureFilter);
@@ -509,12 +531,11 @@ public class SignPdfView extends AppCompatActivity {
         registerReceiver(pdfActionReceiver,deleteSuccessFilter);
         registerReceiver(pdfActionReceiver,showTipFilter);
         registerReceiver(pdfActionReceiver,refreshPdfViewFilter);
-        registerReceiver(pdfActionReceiver,pageChangeFilter);
     }
 
     public void openPdfFile(){
         pdfView.fromFile(new File(filePath))
-                .defaultPage(prePage)
+                .defaultPage(currentPage)
                 .swipeHorizontal(true)
                 .pageSnap(true)
                 .pageFling(true)
@@ -526,6 +547,7 @@ public class SignPdfView extends AppCompatActivity {
                 .onPageChange(new OnPageChangeListener() {
                     @Override
                     public void onPageChanged(int page, int pageCount) {
+                        currentPage = page;
                         if(meetingWsListener!=null&&isHost){
                             WebSocketMessage webSocketMessage = new WebSocketMessage();
                             webSocketMessage.setPageNo(page);
@@ -764,6 +786,14 @@ public class SignPdfView extends AppCompatActivity {
     }
 
     private void findHandwritingData(){
+        if (meetingRecordId != null && !"".equals(meetingRecordId.trim())) {
+            findMeetingHandwriting();
+        } else {
+            findPdfHandwriting();
+        }
+    }
+
+    private void findPdfHandwriting(){
         //查询批注数据
         broadcastIntent(BC_SHOW_LOADING,"正在打开文件");
         httpUtil.get(serverUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
@@ -789,6 +819,36 @@ public class SignPdfView extends AppCompatActivity {
         });
     }
 
+    private void findMeetingHandwriting(){
+        //查询批注数据
+        broadcastIntent(BC_SHOW_LOADING,"正在打开文件");
+        httpUtil.get(serverUrl + Constants.URL_FIND_MEETING_HANDWRITING+"?fileId="+fileId+"&recordId="+meetingRecordId, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                broadcastIntent(BC_RESPONSE_FAILURE,"请求错误");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if(response.isSuccessful()&&response.body()!=null) {
+                    String data = response.body().string();
+                    AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                    if(resData.getData()!=null) {
+                        PdfCommentBean commentBean = JSON.parseObject(resData.getData().toString(),PdfCommentBean.class);
+                        httpUtil.setCommentDataList(commentBean.getHandwritingList());
+                        if(commentBean.getCurPage()!=null) {
+                            currentPage = commentBean.getCurPage();
+                        }
+                    }
+                    broadcastIntent(BC_HANDWRITING_LIST);
+                }else {
+                    String msg = "文件打开失败，请尝试重新打开";
+                    broadcastIntent(BC_RESPONSE_FAILURE,msg);
+                }
+            }
+        });
+    }
+
     /**
      * 显示主菜单按钮
      */
@@ -802,6 +862,7 @@ public class SignPdfView extends AppCompatActivity {
 
         if(meetingRecordId!=null&&!isHost){
             //会议模式(与会人员)
+            actionsMenu.addView(jumpToItem);
             actionsMenu.addView(closeViewItem);
         }else if(meetingRecordId!=null){
             //会议模式（主持人）
@@ -809,9 +870,11 @@ public class SignPdfView extends AppCompatActivity {
             if(meetingMemItem!=null){
                 actionsMenu.addView(meetingMemItem);
             }
+            actionsMenu.addView(jumpToItem);
             actionsMenu.addView(closeViewItem);
         }else{
             actionsMenu.addView(handWriteItem);
+            actionsMenu.addView(jumpToItem);
             actionsMenu.addView(closeViewItem);
         }
     }
@@ -836,9 +899,9 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.setLayoutParams(layoutParams);
         actionsMenu.addView(btnClose);
         actionsMenu.addView(btnSave);
-        actionsMenu.addView(btnUndo);
-        actionsMenu.addView(btnRedo);
-//        actionsMenu.addView(btnErase);
+//        actionsMenu.addView(btnUndo);
+//        actionsMenu.addView(btnRedo);
+        actionsMenu.addView(btnErase);
         actionsMenu.addView(btnClear);
         actionsMenu.addView(btnPen);
     }
@@ -972,5 +1035,8 @@ public class SignPdfView extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(pdfActionReceiver);
+        if(meetingWsListener!=null) {
+            meetingWsListener.closeSocket();
+        }
     }
 }

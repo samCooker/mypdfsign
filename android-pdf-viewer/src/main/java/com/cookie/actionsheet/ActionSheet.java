@@ -16,9 +16,7 @@
 package com.cookie.actionsheet;
 
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.view.Gravity;
@@ -54,7 +52,7 @@ public class ActionSheet {
 
     private PopupWindow popupWindow;
 
-    private ContentView contentView;
+    private ActionSheetContent contentView;
 
     private Context context;
 
@@ -71,7 +69,7 @@ public class ActionSheet {
     private void init(Context context, int width, int height) {
         this.context = context;
         if (popupWindow == null) {
-            contentView = new ContentView(this);
+            contentView = new ActionSheetContent(this);
             popupWindow = new PopupWindow(contentView,
                     width,
                     height,

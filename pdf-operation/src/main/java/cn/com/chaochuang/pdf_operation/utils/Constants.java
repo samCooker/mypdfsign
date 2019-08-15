@@ -15,10 +15,13 @@ public class Constants {
     public static final String KEY_DOWNLOAD_PROGRESS="downloadProgress";
     public static final String KEY_SHOW_MESSAGE="showMessage";
     public static final String KEY_PDF_PAGE="pdfPage";
+    public static final String KEY_OFFSET_X="offsetX";
+    public static final String KEY_OFFSET_Y="offsetY";
     public static final String KEY_FILE_PATH="pdfFilePath";
     public static final String KEY_SERVER_URL="serverUrl";
     public static final String KEY_SERVER_TOKEN="serverToken";
     public static final String KEY_PEN_ONLY="penOnly";
+    public static final String KEY_CURRENT_PAGE="currentPage";
 
     // 会议同步相关
     public static final String KEY_WEB_SOCKET_URL = "webSocketUrl";
@@ -35,7 +38,8 @@ public class Constants {
     public static final String URL_HANDWRITING_DELETE ="handwriting/delete.mo";
     public static final String URL_GET_MD5 ="handwriting/getmdf.mo";
     public static final String URL_DOWNLOAD_FILE ="handwriting/download.mo";
-    public static final String URL_FIND_MEETING_MEMBERS ="wsdata/meeting/members.mo";
+    public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
+    public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
 
     public static final String BC_HANDWRITING_LIST="handwritingList";
     public static final String BC_SHOW_TIP ="showTip";
@@ -50,4 +54,5 @@ public class Constants {
     public static final String BC_DOWNLOAD_FILE_FINISH="downloadFileFinish";
     public static final String BC_REFRESH_PDF_VIEW="refreshPdfView";
     public static final String BC_CHANGE_PAGE="changePage";
+    public static final String BC_SCROLL_TO="scrollTo";
 }

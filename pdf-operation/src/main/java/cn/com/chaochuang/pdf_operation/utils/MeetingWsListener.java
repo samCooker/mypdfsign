@@ -7,7 +7,6 @@ import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
 import com.alibaba.fastjson.JSON;
 import com.github.barteksc.pdfviewer.model.HandwritingData;
 import okhttp3.*;
-import okio.ByteString;
 
 import java.util.concurrent.TimeUnit;
 
@@ -22,8 +21,8 @@ public class MeetingWsListener extends WebSocketListener {
     private static final String TAG = MeetingWsListener.class.getSimpleName();
 
     private WebSocket socketClient;
-
     private SignPdfView signPdfView;
+    private String socketUrl;
 
 
     @Override
@@ -37,9 +36,6 @@ public class MeetingWsListener extends WebSocketListener {
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
         super.onFailure(webSocket, t, response);
         Log.e(TAG,"同步出现了错误:"+t.getMessage());
-        closeSocket();
-
-
     }
 
     @Override
@@ -84,7 +80,9 @@ public class MeetingWsListener extends WebSocketListener {
         super.onClosed(webSocket, code, reason);
         Log.d(TAG,"code:" + code + "onClosed:" + reason);
         closeSocket();
-
+        if(signPdfView!=null) {
+            signPdfView.broadcastIntent(Constants.BC_SHOW_TIP, "已断开连接，请重新打开");
+        }
     }
 
     @Override
@@ -94,8 +92,9 @@ public class MeetingWsListener extends WebSocketListener {
 
     public void startRunning(SignPdfView signPdfView,String socketUrl){
         this.signPdfView = signPdfView;
+        this.socketUrl = socketUrl;
         OkHttpClient client = new OkHttpClient.Builder().readTimeout(25000,  TimeUnit.MILLISECONDS).build();
-        Request request = new Request.Builder().url(socketUrl).build();
+        Request request = new Request.Builder().url(this.socketUrl).build();
         client.newWebSocket(request, this);
         client.dispatcher().executorService().shutdown();
     }

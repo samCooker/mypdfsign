@@ -83,6 +83,16 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     private boolean checkLinkTapped(float x, float y) {
+
+        //是否显示批注详情
+        if(pdfView.checkCanEdit(x,y)){
+            return false;
+        }
+
+        if (pdfView.isNotChangePage()){
+            return false;
+        }
+
         PdfFile pdfFile = pdfView.pdfFile;
         float mappedX = -pdfView.getCurrentXOffset() + x;
         float mappedY = -pdfView.getCurrentYOffset() + y;
@@ -165,8 +175,6 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     @Override
     public boolean onSingleTapUp(MotionEvent event) {
-        //是否显示批注详情
-        pdfView.checkCanEdit(event.getX(),event.getY());
         return false;
     }
 
@@ -188,6 +196,7 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         if (!animationManager.isFlinging()) {
             pdfView.performPageSnap();
         }
+        pdfView.callbacks.callOnScrollEnd(event);
     }
 
     @Override
@@ -291,21 +300,13 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         if (!enabled) {
             return false;
         }
-        boolean retVal = scaleGestureDetector.onTouchEvent(event);
-        retVal = gestureDetector.onTouchEvent(event) || retVal;
+        boolean retVal = gestureDetector.onTouchEvent(event) || scaleGestureDetector.onTouchEvent(event);
 
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//            if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
-//                pdfView.hideSignView();
-//            }
-        }else if (event.getAction() == MotionEvent.ACTION_UP) {
+        if (event.getAction() == MotionEvent.ACTION_UP) {
             if (scrolling) {
                 scrolling = false;
                 onScrollEnd(event);
             }
-//            if(pdfView.isPenOnly()&&!pdfView.isSignpagVisible()){
-//                pdfView.showSignView();
-//            }
         }
         return retVal;
     }

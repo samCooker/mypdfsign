@@ -109,6 +109,10 @@ public class OkHttpUtil {
         this.commentDataList = JSON.parseArray(jsonData, HandwritingData.class);
     }
 
+    public void setCommentDataList(List<HandwritingData> commentDataList){
+        this.commentDataList = commentDataList;
+    }
+
     public List<HandwritingData> getCommentDataList() {
         return commentDataList;
     }

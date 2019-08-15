@@ -17,7 +17,6 @@ package com.github.barteksc.pdfviewer;
 
 import android.content.Context;
 import android.graphics.*;
-import android.graphics.Paint.Style;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -28,7 +27,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import cn.com.chaochuang.writingpen.model.SignBitmapData;
 import com.cookie.actionsheet.ActionSheet;
+import cn.com.chaochuang.writingpen.ui.DrawPenView;
 import com.cookie.actionsheet.OnActionListener;
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
 import com.github.barteksc.pdfviewer.link.DefaultLinkHandler;
@@ -42,8 +43,6 @@ import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.github.barteksc.pdfviewer.util.MathUtils;
 import com.github.barteksc.pdfviewer.util.SnapEdge;
 import com.github.barteksc.pdfviewer.util.Util;
-import com.github.gcacace.signaturepad.views.SignaturePad;
-import com.github.gcacace.signaturepad.views.SketchBoard;
 import com.shockwave.pdfium.PdfDocument;
 import com.shockwave.pdfium.PdfiumCore;
 import com.shockwave.pdfium.util.Size;
@@ -87,6 +86,7 @@ public class PDFView extends RelativeLayout {
     private float maxZoom = DEFAULT_MAX_SCALE;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA);
+
     /**
      * START - scrolling in first page direction
      * END - scrolling in last page direction
@@ -153,9 +153,6 @@ public class PDFView extends RelativeLayout {
     private Paint commentPaint;
     private ActionSheet editActionSheet;
     private ActionSheet infoActionSheet;
-
-    /** Paint object for drawing debug stuff */
-    private Paint debugPaint;
 
     /** Policy for fitting pages to screen */
     private FitPolicy pageFitPolicy = FitPolicy.WIDTH;
@@ -264,7 +261,7 @@ public class PDFView extends RelativeLayout {
             public void onSelected(ActionSheet actionSheet, String title) {
                 Log.d("actionsheet",title);
                 if("删除".equals(title)){
-                    callbacks.callonHandwritingDelete(curEditId);
+                    callbacks.callOnHandwritingDelete(curEditId);
                     actionSheet.dismiss();
                     curEditId="";
                 }
@@ -280,9 +277,6 @@ public class PDFView extends RelativeLayout {
                 redraw();
             }
         });
-
-        debugPaint = new Paint();
-        debugPaint.setStyle(Style.STROKE);
 
         pdfiumCore = new PdfiumCore(context);
         setWillNotDraw(false);
@@ -313,6 +307,9 @@ public class PDFView extends RelativeLayout {
         if (pdfFile == null) {
             return;
         }
+
+        editActionSheet.dismiss();
+        infoActionSheet.dismiss();
 
         page = pdfFile.determineValidPageNumberFrom(page);
         float offset = page == 0 ? 0 : -pdfFile.getPageOffset(page, zoom);
@@ -760,33 +757,31 @@ public class PDFView extends RelativeLayout {
 
         float translationX = currentXOffset + localTranslationX;
         float translationY = currentYOffset + localTranslationY;
-        if (translationX + dstRect.left >= getWidth() || translationX + dstRect.right <= 0 ||
-                translationY + dstRect.top >= getHeight() || translationY + dstRect.bottom <= 0) {
+        if (translationX + dstRect.left >= getWidth() || translationX + dstRect.right <= 0 || translationY + dstRect.top >= getHeight() || translationY + dstRect.bottom <= 0) {
             canvas.translate(-localTranslationX, -localTranslationY);
-            return;
-        }
+        }else{
+            canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
 
-        canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
+            if (curEditId != null && curEditId.equals(data.getId())) {
+                String dateStr = data.getSignTime()!=null?dateFormat.format(data.getSignTime()):"";
+                String info = "签批人员：" + data.getSignerName() + "\n签批时间：" + dateStr;
 
-        if (curEditId != null && curEditId.equals(data.getId())) {
-            String dateStr = data.getSignTime()!=null?dateFormat.format(data.getSignTime()):"";
-            String info = "签批人员：" + data.getSignerName() + "\n签批时间：" + dateStr;
-
-            //绘制边界
-            canvas.drawRect(dstRect.left - editLinePadding, dstRect.top - editLinePadding, dstRect.right + editLinePadding, dstRect.bottom + editLinePadding, commentPaint);
-            boolean curUserFlag = data.getSignerId() != null && data.getSignerId().equals(userId);
-            RectF infoRecfF = new RectF(translationX + dstRect.left, translationY + dstRect.top, translationX + dstRect.right, translationY + dstRect.bottom);
-            if(curUserFlag) {
-                editActionSheet.setTitle(info);
-                //删除按钮
-                editActionSheet.show(infoRecfF);
-            }else {
-                infoActionSheet.setTitle(info);
-                infoActionSheet.show(infoRecfF);
+                //绘制边界
+                canvas.drawRect(dstRect.left - editLinePadding, dstRect.top - editLinePadding, dstRect.right + editLinePadding, dstRect.bottom + editLinePadding, commentPaint);
+                boolean curUserFlag = data.getSignerId() != null && data.getSignerId().equals(userId);
+                RectF infoRecfF = new RectF(translationX + dstRect.left, translationY + dstRect.top, translationX + dstRect.right, translationY + dstRect.bottom);
+                if(curUserFlag) {
+                    editActionSheet.setTitle(info);
+                    //删除按钮
+                    editActionSheet.show(infoRecfF);
+                }else {
+                    infoActionSheet.setTitle(info);
+                    infoActionSheet.show(infoRecfF);
+                }
             }
-        }
 
-        canvas.translate(-localTranslationX, -localTranslationY);
+            canvas.translate(-localTranslationX, -localTranslationY);
+        }
     }
 
     /**
@@ -895,7 +890,7 @@ public class PDFView extends RelativeLayout {
      */
     public void moveTo(float offsetX, float offsetY, boolean moveHandle) {
 
-        if(signaturePad!=null&&signaturePad.getVisibility() == VISIBLE){
+        if(drawPenView!=null&&drawPenView.getVisibility() == VISIBLE){
             //已显示签批图层，则不滑动
             return;
         }
@@ -1425,6 +1420,8 @@ public class PDFView extends RelativeLayout {
 
         private OnHandwritingDeleteListener onHandwritingDeleteListener;
 
+        private OnScrollEndListener onScrollEndListener;
+
         private LinkHandler linkHandler = new DefaultLinkHandler(PDFView.this);
 
         private int defaultPage = 0;
@@ -1597,6 +1594,11 @@ public class PDFView extends RelativeLayout {
             return this;
         }
 
+        public Configurator onScrollEndListener(OnScrollEndListener onScrollEndListener){
+            this.onScrollEndListener = onScrollEndListener;
+            return this;
+        }
+
         public void load() {
             if (!hasSize) {
                 waitingDocumentConfigurator = this;
@@ -1615,6 +1617,7 @@ public class PDFView extends RelativeLayout {
             PDFView.this.callbacks.setOnPageError(onPageErrorListener);
             PDFView.this.callbacks.setLinkHandler(linkHandler);
             PDFView.this.callbacks.setOnHandwritingDeleteListener(onHandwritingDeleteListener);
+            PDFView.this.callbacks.setOnScrollEndListener(onScrollEndListener);
             PDFView.this.setSwipeEnabled(enableSwipe);
             PDFView.this.setNightMode(nightMode);
             PDFView.this.enableDoubletap(enableDoubletap);
@@ -1642,12 +1645,13 @@ public class PDFView extends RelativeLayout {
     /**
      * -------新增的属性和方法--------
      */
-
-    private SignaturePad signaturePad;
+    private DrawPenView drawPenView;
     private String userId;
     private String curEditId;
     //虚线边框padding
     private float editLinePadding = 10f;
+    //是否禁止翻页
+    private boolean notChangePage = false;
 
     /**
      * （新添加方法） 显示签批图层
@@ -1667,129 +1671,100 @@ public class PDFView extends RelativeLayout {
         layoutParams.addRule(CENTER_IN_PARENT);
         signView.setLayoutParams(layoutParams);
 
-        if(signaturePad!=null){
-            this.removeView(signView);
-        }
         this.addView(signView);
-        signaturePad = signView.findViewById(R.id.signature_pad);
-        setPenSetting(penWidth,penColor,penOnly);
-        signaturePad.setOnSignedListener(new SignaturePad.OnSignedListener() {
-            @Override
-            public void onStartSigning() {
+        drawPenView = signView.findViewById(R.id.view_handwriting);
+        doubletapEnabled = false;
+        drawPenView.setPenSetting(penWidth,penColor,penOnly);
 
-            }
-
-            @Override
-            public void onSigned() {
-            }
-
-            @Override
-            public void onClear() {
-
-            }
-        });
     }
 
-    public void setPenSetting(float width, int penColor,boolean penOnly){
-        signaturePad.setMinWidth(width);
-        signaturePad.setMaxWidth(width+4F);
-        signaturePad.setPenColor(penColor);
-        signaturePad.setPenOnly(penOnly);
+    public void setPenSetting(float penWidth, int penColor,boolean penOnly){
+        if(drawPenView!=null){
+            drawPenView.setPenSetting(penWidth,penColor,penOnly);
+        }
     }
 
     public void showSignView(){
-        if(signaturePad!=null){
-            signaturePad.setVisibility(VISIBLE);
+        if(drawPenView!=null){
+            drawPenView.setVisibility(VISIBLE);
         }
     }
 
     public boolean isSignpagVisible(){
-        if(signaturePad!=null){
-            return signaturePad.getVisibility() == VISIBLE;
+        if(drawPenView!=null){
+            return drawPenView.getVisibility() == VISIBLE;
         }
         return false;
     }
 
     public boolean isPenOnly(){
-        if(signaturePad!=null) {
-            return signaturePad.isPenOnly();
+        if(drawPenView!=null) {
+            return drawPenView.isPenOnly();
         }
         return false;
     }
 
     public void hideSignView(){
-        if(signaturePad!=null){
-            signaturePad.setVisibility(INVISIBLE);
-        }
-    }
-
-    public void signUndo(){
-        if(signaturePad!=null){
-            signaturePad.undo();
-        }
-    }
-
-    public void signRedo(){
-        if(signaturePad!=null){
-            signaturePad.redo();
+        if(drawPenView!=null){
+            doubletapEnabled = true;
+            drawPenView.setVisibility(INVISIBLE);
         }
     }
 
     public void signClear(){
-        if(signaturePad!=null){
-            signaturePad.clear();
+        if(drawPenView!=null){
+            drawPenView.reset();
         }
     }
 
     public void signEraseMode(boolean eraseMode){
-        if(signaturePad!=null){
-            if(eraseMode) {
-                signaturePad.setMode(SketchBoard.Mode.ERASE);
-            }else{
-                signaturePad.setMode(SketchBoard.Mode.DRAW);
-            }
+        if(drawPenView!=null){
+            drawPenView.setEraseMode(eraseMode);
         }
     }
 
-    public Bitmap getSignBitmap(){
-        if(signaturePad!=null){
-            return signaturePad.getTransparentSignatureBitmap(true);
+    public HandwritingData getSignBitmap(){
+        if(drawPenView!=null){
+            HandwritingData data = new HandwritingData();
+            SignBitmapData bitmapData = drawPenView.getBitmapWithBlank(10);
+            data.setImageBitmap(bitmapData.getSignBitmap());
+            data.setSignX(getSignX(bitmapData.getMinX()));
+            data.setSignY(getSignY(bitmapData.getMinY()));
+
+            return data;
         }
         return null;
     }
 
-    public boolean isHandwritingEmpty(){
-        return signaturePad.isEmpty();
+    public boolean hasHandwriting(){
+        if(drawPenView!=null){
+            return drawPenView.getHasDraw();
+        }
+        return false;
     }
 
     /**
      * 获取相对屏幕坐标系（屏幕左上角为坐标原点）的坐标
      * @return
      */
-    public float getSignX(){
-        if(signaturePad!=null){
-            float offsetX;
-            if (currentXOffset>=0) {
-                offsetX = 0;
-            }else{
-                SizeF size = pdfFile.getMaxPageSize();
-                offsetX = -currentXOffset-(currentPage*size.getWidth()*zoom);
-            }
-            return (signaturePad.getxMin()+offsetX)/zoom;
+    public float getSignX(int x){
+        float offsetX;
+        if (currentXOffset>=0) {
+            offsetX = 0;
+        }else{
+            SizeF size = pdfFile.getMaxPageSize();
+            offsetX = -currentXOffset-(currentPage*size.getWidth()*zoom);
         }
-        return 0;
+        return (x+offsetX)/zoom;
     }
-    public float getSignY(){
-        if(signaturePad!=null){
-            float offsetY;
-            if (currentYOffset>=0) {
-                offsetY = 0;
-            } else{
-                offsetY = -currentYOffset;
-            }
-            return (signaturePad.getyMin()+offsetY)/zoom;
+    public float getSignY(int y){
+        float offsetY;
+        if (currentYOffset>=0) {
+            offsetY = 0;
+        } else{
+            offsetY = -currentYOffset;
         }
-        return 0;
+        return (y+offsetY)/zoom;
     }
 
 
@@ -1838,34 +1813,27 @@ public class PDFView extends RelativeLayout {
         if(dataList!=null){
             for (HandwritingData data:dataList){
                 if(data.getPageNo() == getCurrentPage()){
-                    float localTranslationX;
-                    float localTranslationY;
-                    SizeF size = pdfFile.getPageSize(data.getPageNo());
-                    if (swipeVertical) {
-                        //todo 未考虑这种情况
-                        localTranslationY = pdfFile.getPageOffset(data.getPageNo(), zoom);
-                        float maxWidth = pdfFile.getMaxPageWidth();
-                        localTranslationX = toCurrentScale(maxWidth - size.getWidth()) / 2;
-                    } else {
-                        localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
-                        float maxHeight = pdfFile.getMaxPageHeight();
-                        localTranslationY = toCurrentScale(maxHeight - size.getHeight()) / 2;
-                    }
+//                    SizeF size = pdfFile.getPageSize(data.getPageNo());
+                    //只考虑水平滑动的情况
+                    float localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
+//                    float maxHeight = pdfFile.getMaxPageHeight();
+//                    float localTranslationY = toCurrentScale(maxHeight - size.getHeight()) / 2;
 
                     float pointX;
                     //相对屏幕pdf左上角的坐标
                     if(currentXOffset<0){
                         //考虑超出屏幕的偏移量
-                        pointX = -currentXOffset + localTranslationX + x;
+                        pointX = - currentXOffset + x;
                     }else{
-                        pointX = localTranslationX + x -currentXOffset;
+                        pointX =  x - currentXOffset;
                     }
+                    pointX = pointX - localTranslationX;
                     float pointY;
                     if(currentYOffset<0){
                         //考虑超出屏幕的偏移量
-                        pointY = -currentYOffset + localTranslationY + y;
+                        pointY = -currentYOffset + y;
                     }else{
-                        pointY = localTranslationY + y - currentYOffset;
+                        pointY = y - currentYOffset;
                     }
 
                     Log.d("touch",pointX + ":" + pointY);
@@ -1884,4 +1852,13 @@ public class PDFView extends RelativeLayout {
         return false;
     }
 
+
+
+    public boolean isNotChangePage() {
+        return notChangePage;
+    }
+
+    public void setNotChangePage(boolean notChangePage) {
+        this.notChangePage = notChangePage;
+    }
 }

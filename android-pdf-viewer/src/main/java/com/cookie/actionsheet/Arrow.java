@@ -22,7 +22,7 @@ package com.cookie.actionsheet;
  * TODO: Only supports DOWN direction at the moment, it should be set 'public' and provide API after that.
  */
 
-enum Arrow {
+public enum Arrow {
     UP,
     DOWN,
     RIGHT,

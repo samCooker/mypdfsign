@@ -19,11 +19,12 @@ public class PenColorAdaptor extends BaseAdapter{
 
     private Context context;
     private final int[] penColors = new int[]{
-            Color.argb(255, 40, 36, 37),Color.argb(255, 255, 0, 0),
-            Color.argb(255, 0, 255, 0),Color.argb(255, 129, 184, 69),
-            Color.argb(255, 44, 152, 140), Color.argb(255, 48, 115, 170),
-            Color.argb(255, 139, 26, 99), Color.argb(255, 112, 101, 89),
-            Color.argb(255, 226, 226, 226), Color.argb(255, 219, 88, 50),
+            Color.BLACK,
+            Color.GRAY,
+            Color.RED,
+            Color.GREEN,
+            Color.BLUE,
+            Color.WHITE
     };
 
     public PenColorAdaptor(Context mContext) {
