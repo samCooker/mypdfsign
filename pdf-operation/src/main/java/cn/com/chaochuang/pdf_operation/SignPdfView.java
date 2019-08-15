@@ -197,6 +197,9 @@ public class SignPdfView extends AppCompatActivity {
      * pdf 签批按钮显示
      */
     private void initMenuBtn() {
+
+        initCommonBtn();
+
         //region 手写批注
         handWriteItem = getMenuButton(getResources().getDrawable(R.drawable.ic_pen),"手 写");
         handWriteItem.setOnClickListener(new View.OnClickListener() {
@@ -306,26 +309,6 @@ public class SignPdfView extends AppCompatActivity {
 
             }
         });
-        //endregion
-
-        //region 手写签批撤销
-//        btnUndo = getMenuButton(getResources().getDrawable(R.drawable.ic_undo),"撤 销");
-//        btnUndo.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                pdfView.signUndo();
-//            }
-//        });
-        //endregion
-
-        //region 手写签批回退
-//        btnRedo = getMenuButton(getResources().getDrawable(R.drawable.ic_redo),"恢 复");
-//        btnRedo.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                pdfView.signRedo();
-//            }
-//        });
         //endregion
 
         //region 手写签批清空
@@ -451,7 +434,7 @@ public class SignPdfView extends AppCompatActivity {
      * 会议同步按钮（与会人员）
      */
     private void initMeetingBtn(){
-
+        initCommonBtn();
         closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_exit),"退出同步");
         closeViewItem.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -459,6 +442,10 @@ public class SignPdfView extends AppCompatActivity {
                 finish();
             }
         });
+    }
+
+    private void initCommonBtn(){
+
     }
 
     private AppCompatButton getMenuButton(Drawable drawable, String btnName) {
@@ -521,6 +508,7 @@ public class SignPdfView extends AppCompatActivity {
         IntentFilter deleteSuccessFilter = new IntentFilter(BC_DELETE_HANDWRITING);
         IntentFilter showTipFilter = new IntentFilter(BC_SHOW_TIP);
         IntentFilter refreshPdfViewFilter = new IntentFilter(BC_REFRESH_PDF_VIEW);
+        IntentFilter pageChangeFilter = new IntentFilter(BC_CHANGE_PAGE);
 
         registerReceiver(pdfActionReceiver,handwritingListFilter);
         registerReceiver(pdfActionReceiver,resFailureFilter);
@@ -531,6 +519,7 @@ public class SignPdfView extends AppCompatActivity {
         registerReceiver(pdfActionReceiver,deleteSuccessFilter);
         registerReceiver(pdfActionReceiver,showTipFilter);
         registerReceiver(pdfActionReceiver,refreshPdfViewFilter);
+        registerReceiver(pdfActionReceiver,pageChangeFilter);
     }
 
     public void openPdfFile(){
@@ -862,7 +851,6 @@ public class SignPdfView extends AppCompatActivity {
 
         if(meetingRecordId!=null&&!isHost){
             //会议模式(与会人员)
-            actionsMenu.addView(jumpToItem);
             actionsMenu.addView(closeViewItem);
         }else if(meetingRecordId!=null){
             //会议模式（主持人）
