@@ -2,8 +2,6 @@ package cn.com.chaochuang.writingpen.ui;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.graphics.*;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -20,7 +18,6 @@ import cn.com.chaochuang.writingpen.utils.SteelPen;
 /**
  * @author shiming
  * @version v1.0 create at 2017/8/24
- * @des DrawPenView实现手写关键类，目前只提供了，手绘的功能和清除画布，后期根据业务逻辑可以动态的设置方法
  */
 public class DrawPenView extends View {
     private static final String TAG = "DrawPenView";
@@ -34,6 +31,7 @@ public class DrawPenView extends View {
 
     private float penWidth;
     private int penColor;
+    private int penType;
     private boolean penOnly;
 
     public DrawPenView(Context context) {
@@ -76,12 +74,15 @@ public class DrawPenView extends View {
         mPaint.setAntiAlias(true);
         mPaint.setStrokeMiter(1.0f);
         mStokeBrushPen.setPaint(mPaint);
+
+        setCanvasCode(penType);
     }
 
 
-    public void setPenSetting(float penWidth, int penColor,boolean penOnly){
+    public void setPenSetting(float penWidth, int penColor,boolean penOnly,int penType){
         this.penWidth = penWidth;
         this.penColor = penColor;
+        this.penType = penType;
         this.penOnly = penOnly;
 
         initPaint();

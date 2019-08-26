@@ -22,6 +22,12 @@ public class Constants {
     public static final String KEY_SERVER_TOKEN="serverToken";
     public static final String KEY_PEN_ONLY="penOnly";
     public static final String KEY_CURRENT_PAGE="currentPage";
+    public static final String KEY_IS_DOC_MODE="isDocMode";
+
+    //公文手写签批相关
+    public static final String KEY_DOC_ID="docId";
+    public static final String KEY_FLOW_INST_ID="flowInstId";
+    public static final String KEY_NODE_INST_ID="nodeInstId";
 
     // 会议同步相关
     public static final String KEY_WEB_SOCKET_URL = "webSocketUrl";
@@ -33,11 +39,11 @@ public class Constants {
     public static final String PARAM_USER_ID="userId";
     public static final String PARAM_USER_NAME="userName";
 
-    public static final String URL_HANDWRITING_LIST ="handwriting/list.mo";
-    public static final String URL_HANDWRITING_SAVE ="handwriting/save.mo";
-    public static final String URL_HANDWRITING_DELETE ="handwriting/delete.mo";
-    public static final String URL_GET_MD5 ="handwriting/getmdf.mo";
-    public static final String URL_DOWNLOAD_FILE ="handwriting/download.mo";
+    public static final String URL_HANDWRITING_LIST ="comment/list.mo";
+    public static final String URL_HANDWRITING_SAVE ="comment/save.mo";
+    public static final String URL_HANDWRITING_DELETE ="comment/delete.mo";
+    public static final String URL_GET_MD5 ="comment/getmdf.mo";
+    public static final String URL_DOWNLOAD_FILE ="comment/download.mo";
     public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
     public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
 

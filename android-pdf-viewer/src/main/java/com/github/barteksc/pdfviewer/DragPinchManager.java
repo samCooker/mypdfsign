@@ -67,8 +67,9 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
         boolean onTapHandled = pdfView.callbacks.callOnTap(e);
-        boolean linkTapped = checkLinkTapped(e.getX(), e.getY());
-        if (!onTapHandled && !linkTapped) {
+        //去掉链接跳转
+        //boolean linkTapped = checkLinkTapped(e.getX(), e.getY());
+        if (!onTapHandled) {
             ScrollHandle ps = pdfView.getScrollHandle();
             if (ps != null && !pdfView.documentFitsView()) {
                 if (!ps.shown()) {
@@ -83,11 +84,6 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     private boolean checkLinkTapped(float x, float y) {
-
-        //是否显示批注详情
-        if(pdfView.checkCanEdit(x,y)){
-            return false;
-        }
 
         if (pdfView.isNotChangePage()){
             return false;

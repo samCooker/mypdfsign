@@ -23,9 +23,19 @@ import cn.com.chaochuang.pdf_operation.model.PenColorAdaptor;
 
 public class PenSettingFragment extends DialogFragment {
 
+    /**
+     * 钢笔
+     */
+    public static int STROKE_TYPE_PEN = 1;
+    /**
+     * 毛笔
+     */
+    public static int STROKE_TYPE_BRUSH = 2;
+
     public static final String PEN_WIDTH="penMaxSize";
     public static final String PEN_COLOR="penColor";
     public static final String PEN_ONLY="penOnly";
+    public static final String PEN_TYPE="penType";
     public static final String PEN_SETTING_DATA = "pen_info";
 
     private SharedPreferences penSettingData;
@@ -39,16 +49,23 @@ public class PenSettingFragment extends DialogFragment {
     private PenColorAdaptor penColorAdaptor;
 
     private GridView penColorGv;
+
     private SeekBar penTypeBar;
     private TextView penWidthTv;
-    private TextView previewWidthTv;
+    private PenWidthView penWidthView;
     private Switch penOnlySwitch;
 
-    private int penMaxWidth = 30;
-    private int penMinWidth = 1;
-    public static int defaultWidth = 10;
+//    private RadioGroup penTypeGroup;
+//    private RadioButton normalPenBtn;
+//    private RadioButton brushPenBtn;
+
+    private int penMaxWidth = 80;
+    private int penMinWidth = 2;
+    private int brushMinWidth = 16;
+    public static int defaultWidth = 12;
     private float penWidth;
     private int penColor;
+    private int penType;
     private boolean penOnlyFlag;
 
 
@@ -93,6 +110,7 @@ public class PenSettingFragment extends DialogFragment {
                 editor.putFloat(PEN_WIDTH,penWidth);
                 editor.putInt(PEN_COLOR,penColor);
                 editor.putBoolean(PEN_ONLY,penOnlyFlag);
+                editor.putInt(PEN_TYPE,penType);
                 if(editor.commit()&&onSaveListener!=null){
                     onSaveListener.onSaveAction();
                 }else{
@@ -132,16 +150,15 @@ public class PenSettingFragment extends DialogFragment {
             penWidth = penSettingData.getFloat(PEN_WIDTH, defaultWidth);
             penColor = penSettingData.getInt(PEN_COLOR, Color.BLACK);
             penOnlyFlag = penSettingData.getBoolean(PEN_ONLY,true);
+            penType = penSettingData.getInt(PEN_TYPE,STROKE_TYPE_PEN);
         }else{
             penWidth = defaultWidth;
             penColor = Color.BLACK;
+            penType = STROKE_TYPE_PEN;
         }
 
-        previewWidthTv = settingContent.findViewById(R.id.tv_width_preview);
-        final RelativeLayout.LayoutParams linearParams = (RelativeLayout.LayoutParams) previewWidthTv.getLayoutParams();
-        linearParams.height = (int) (penWidth);
-        previewWidthTv.setLayoutParams(linearParams);
-        previewWidthTv.setBackgroundColor(penColor);
+        penWidthView = settingContent.findViewById(R.id.tv_width_preview);
+        penWidthView.setPenConfig(penWidth,penColor);
 
         penOnlySwitch = settingContent.findViewById(R.id.sw_pen_only);
         penOnlySwitch.setChecked(penOnlyFlag);
@@ -159,7 +176,7 @@ public class PenSettingFragment extends DialogFragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 penColor = penColorAdaptor.getItemValue(position);
-                previewWidthTv.setBackgroundColor(penColor);
+                penWidthView.setPenConfig(penWidth,penColor);
             }
         });
 
@@ -174,11 +191,10 @@ public class PenSettingFragment extends DialogFragment {
         penTypeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                previewWidthTv.setLayoutParams(linearParams);
-                // 使设置好的布局参数应用到控件
-                penWidth = progress+penMinWidth;
-                linearParams.height = (int) (penWidth);
-                penWidthTv.setText("宽度：" +(progress+penMinWidth));
+                penWidth = progress;
+                penWidthTv.setText("宽度：" +(penWidth));
+                penWidthView.setPenConfig(penWidth,penColor);
+
             }
 
             @Override
@@ -191,10 +207,57 @@ public class PenSettingFragment extends DialogFragment {
 
             }
         });
+
+        int min = penMinWidth;
+
+//        penTypeGroup = settingContent.findViewById(R.id.rg_pen_type);
+//        normalPenBtn = settingContent.findViewById(R.id.rg_pen_normal);
+//        brushPenBtn = settingContent.findViewById(R.id.rg_pen_brush);
+//        if(STROKE_TYPE_BRUSH == penType){
+//            brushPenBtn.setChecked(true);
+//            min = brushMinWidth;
+//        }else{
+//            normalPenBtn.setChecked(true);
+//            min = penMinWidth;
+//        }
+//        penTypeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(RadioGroup group, int checkedId) {
+//                int _penMinWidth = penMinWidth;
+//                if(checkedId == R.id.rg_pen_normal){
+//                    normalPenBtn.setChecked(true);
+//                    _penMinWidth = penMinWidth;
+//                    penType = STROKE_TYPE_PEN;
+//                }else if(checkedId == R.id.rg_pen_brush){
+//                    brushPenBtn.setChecked(true);
+//                    _penMinWidth = brushMinWidth;
+//                    penType = STROKE_TYPE_BRUSH;
+//                }
+//
+//                setSeekBarWidth(_penMinWidth);
+//            }
+//        });
+
+        setSeekBarWidth(min);
     }
 
-    public void showFragmentDlg(android.support.v4.app.FragmentManager fragmentManager, String tag, OnSaveListener onSaveListener){
+    private void setSeekBarWidth(int width) {
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            penTypeBar.setMin(width);
+        }
+        if(penWidth<width){
+            penWidth = width;
+        }
+        penTypeBar.setProgress((int)penWidth);
+        penWidthTv.setText("宽度：" +(penWidth));
+    }
+
+    public void showFragmentDlg(android.support.v4.app.FragmentManager fragmentManager, String tag){
         this.show(fragmentManager,tag);
+
+    }
+
+    public void setOnSaveListener(OnSaveListener onSaveListener) {
         this.onSaveListener = onSaveListener;
     }
 

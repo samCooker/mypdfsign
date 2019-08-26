@@ -61,13 +61,13 @@ public class SteelPen extends BasePenExtend {
     private void drawLine(Canvas canvas, double x0, double y0, double w0, double x1, double y1, double w1, Paint paint) {
         //求两个数字的平方根 x的平方+y的平方在开方记得X的平方+y的平方=1，这就是一个园
         double curDis = Math.hypot(x0 - x1, y0 - y1);
-        int steps = 1;
+        int steps = 3;
         if (paint.getStrokeWidth() < 6) {
-            steps = 1 + (int) (curDis / 2);
+            steps = 3 + (int) (curDis / 2);
         } else if (paint.getStrokeWidth() > 60) {
-            steps = 1 + (int) (curDis / 4);
+            steps = 3 + (int) (curDis / 4);
         } else {
-            steps = 1 + (int) (curDis / 3);
+            steps = 3 + (int) (curDis / 3);
         }
         double deltaX = (x1 - x0) / steps;
         double deltaY = (y1 - y0) / steps;

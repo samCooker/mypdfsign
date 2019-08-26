@@ -7,7 +7,7 @@
  */
 package cn.com.chaochuang.pdf_operation.model;
 
-import com.github.barteksc.pdfviewer.model.HandwritingData;
+import cn.com.chaochuang.writingpen.model.CommentData;
 
 import java.util.List;
 
@@ -17,7 +17,8 @@ import java.util.List;
 public class PdfCommentBean {
 
     private Integer curPage;
-    private List<HandwritingData> handwritingList;
+    private List<CommentData> handwritingList;
+    private List<CommentData> textDataList;
 
     public Integer getCurPage() {
         return curPage;
@@ -27,11 +28,19 @@ public class PdfCommentBean {
         this.curPage = curPage;
     }
 
-    public List<HandwritingData> getHandwritingList() {
+    public List<CommentData> getHandwritingList() {
         return handwritingList;
     }
 
-    public void setHandwritingList(List<HandwritingData> handwritingList) {
+    public void setHandwritingList(List<CommentData> handwritingList) {
         this.handwritingList = handwritingList;
+    }
+
+    public List<CommentData> getTextDataList() {
+        return textDataList;
+    }
+
+    public void setTextDataList(List<CommentData> textDataList) {
+        this.textDataList = textDataList;
     }
 }

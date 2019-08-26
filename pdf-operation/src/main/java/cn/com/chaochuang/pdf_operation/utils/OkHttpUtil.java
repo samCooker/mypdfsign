@@ -1,9 +1,8 @@
 package cn.com.chaochuang.pdf_operation.utils;
 
 import android.util.Log;
-import com.alibaba.fastjson.JSON;
+import cn.com.chaochuang.writingpen.model.CommentData;
 import com.chaochuang.oa.dataaec.util.AesTool;
-import com.github.barteksc.pdfviewer.model.HandwritingData;
 import okhttp3.*;
 
 import java.io.UnsupportedEncodingException;
@@ -32,7 +31,8 @@ public class OkHttpUtil {
     private Boolean isEncoding;
     private String serverToken;
 
-    private List<HandwritingData> commentDataList;
+    private List<CommentData> handwritingList;
+    private List<CommentData> textDataList;
 
     public OkHttpUtil(boolean encodeFlag,String token){
         this.isEncoding = encodeFlag;
@@ -105,15 +105,19 @@ public class OkHttpUtil {
         client.newCall(request).enqueue(callBack);
     }
 
-    public void setCommentDataList(String jsonData){
-        this.commentDataList = JSON.parseArray(jsonData, HandwritingData.class);
+    public void setHandwritingList(List<CommentData> commentDataList){
+        this.handwritingList = commentDataList;
     }
 
-    public void setCommentDataList(List<HandwritingData> commentDataList){
-        this.commentDataList = commentDataList;
+    public List<CommentData> getHandwritingList() {
+        return handwritingList;
     }
 
-    public List<HandwritingData> getCommentDataList() {
-        return commentDataList;
+    public List<CommentData> getTextDataList() {
+        return textDataList;
+    }
+
+    public void setTextDataList(List<CommentData> textDataList) {
+        this.textDataList = textDataList;
     }
 }

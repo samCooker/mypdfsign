@@ -5,18 +5,18 @@
     android:layout_height="wrap_content"
     android:orientation="vertical" >
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="110dp"
+        android:layout_gravity="center_vertical"
+        android:padding="10dp"
         android:background="@android:color/white" >
 
-        <TextView
+        <cn.com.chaochuang.pdf_operation.ui.PenWidthView
             android:id="@+id/tv_width_preview"
-            android:layout_width="200dp"
-            android:layout_height="2dp"
-            android:layout_centerInParent="true"
-            android:background="@android:color/black" />
-    </RelativeLayout>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </LinearLayout>
 
 
     <LinearLayout
@@ -38,6 +38,18 @@
             android:padding="5dp"/>
     </LinearLayout>
 
+
+    <!--<LinearLayout-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:orientation="horizontal"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:padding="10dp">-->
+        <!--<RadioGroup android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/rg_pen_type">-->
+            <!--<RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="普通笔  " android:id="@+id/rg_pen_normal" android:layout_marginRight="30dp" android:drawableRight="@drawable/pen_ballpen"/>-->
+            <!--<RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="笔  刷  " android:id="@+id/rg_pen_brush" android:drawableRight="@drawable/pen_waterpen"/>-->
+        <!--</RadioGroup>-->
+    <!--</LinearLayout>-->
+
     <LinearLayout
             android:padding="10dp"
             android:orientation="horizontal"
@@ -49,12 +61,11 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/sw_pen_only"/>
     </LinearLayout>
-    
-    <GridView
-        android:id="@+id/gv_pen_color"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:numColumns="5"
-        android:gravity="center"/>
 
+    <GridView
+            android:id="@+id/gv_pen_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:numColumns="5"
+            android:gravity="center"/>
 </LinearLayout>

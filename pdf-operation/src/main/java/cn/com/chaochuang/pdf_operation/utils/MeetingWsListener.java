@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.util.Log;
 import cn.com.chaochuang.pdf_operation.SignPdfView;
 import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
+import cn.com.chaochuang.writingpen.model.CommentData;
 import com.alibaba.fastjson.JSON;
-import com.github.barteksc.pdfviewer.model.HandwritingData;
 import okhttp3.*;
 
 import java.util.concurrent.TimeUnit;
@@ -48,9 +48,9 @@ public class MeetingWsListener extends WebSocketListener {
         }
         switch (messageInfo.getMessageType()){
             case WebSocketMessage.TYPE_HANDWRITING_ADD:
-                HandwritingData handwritingData = JSON.parseObject(messageInfo.getMessageData(), HandwritingData.class);
+                CommentData handwritingData = JSON.parseObject(messageInfo.getMessageData(), CommentData.class);
                 if(signPdfView!=null&&handwritingData!=null){
-                    signPdfView.addHandwritingData(handwritingData);
+                    signPdfView.addHandwritingDataAndRefresh(handwritingData);
                 }
                 break;
             case WebSocketMessage.TYPE_HANDWRITING_DELETE:

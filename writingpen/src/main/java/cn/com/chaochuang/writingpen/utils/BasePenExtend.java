@@ -37,7 +37,7 @@ public abstract class BasePenExtend extends BasePen {
     protected Context mContext;
 
     //橡皮擦模式
-    private boolean isEraser = false;
+    protected boolean isEraser = false;
     public float eraseWidth = 20f;
 
     public BasePenExtend(Context context){
@@ -314,7 +314,6 @@ public abstract class BasePenExtend extends BasePen {
      * @param point
      * @param paint
      */
-    // TODO: 2017/10/18  这里可以优化 当一直处于onDown事件的时候，其实这个方法一直在走，优化的点是，处于down事件，这里不需要走
     protected void drawToPoint(Canvas canvas, ControllerPoint point, Paint paint) {
         if ((mCurPoint.x == point.x) && (mCurPoint.y == point.y)) {
             return;

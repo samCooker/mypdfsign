@@ -17,8 +17,7 @@ package com.github.barteksc.pdfviewer;
 
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
-
-import com.github.barteksc.pdfviewer.model.HandwritingData;
+import cn.com.chaochuang.writingpen.model.CommentData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 
 import java.util.*;
@@ -34,7 +33,9 @@ class CacheManager {
 
     private final List<PagePart> thumbnails;
 
-    private final List<HandwritingData> handwriteDataList;
+    private final List<CommentData> handwritingList;
+
+    private final List<CommentData> textDataList;
 
     private final Object passiveActiveLock = new Object();
 
@@ -44,7 +45,8 @@ class CacheManager {
         activeCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         passiveCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         thumbnails = new ArrayList<>();
-        handwriteDataList = new ArrayList<>();
+        handwritingList = new ArrayList<>();
+        textDataList = new ArrayList<>();
     }
 
     public void cachePart(PagePart part) {
@@ -92,14 +94,25 @@ class CacheManager {
 
     }
 
-    public void cacheHandwriteImage(HandwritingData part) {
-        synchronized (handwriteDataList) {
-            for (HandwritingData data: handwriteDataList){
+    public void cacheHandwriteImage(CommentData part) {
+        synchronized (handwritingList) {
+            for (CommentData data: handwritingList){
                 if(data.equals(part)){
                     return;
                 }
             }
-            handwriteDataList.add(part);
+            handwritingList.add(part);
+        }
+    }
+
+    public void cacheTextData(CommentData part) {
+        synchronized (textDataList) {
+            for (CommentData data: textDataList){
+                if(data.equals(part)){
+                    return;
+                }
+            }
+            textDataList.add(part);
         }
     }
 
@@ -107,10 +120,10 @@ class CacheManager {
         if(id==null){
             return;
         }
-        synchronized (handwriteDataList) {
-            Iterator<HandwritingData> iterator = handwriteDataList.iterator();
+        synchronized (handwritingList) {
+            Iterator<CommentData> iterator = handwritingList.iterator();
             while (iterator.hasNext()){
-                HandwritingData handwritingData = iterator.next();
+                CommentData handwritingData = iterator.next();
                 if(id.equals(handwritingData.getId())){
                     iterator.remove();
                 }
@@ -118,9 +131,47 @@ class CacheManager {
         }
     }
 
-    public List<HandwritingData> getHandwritePart() {
-        synchronized (handwriteDataList) {
-            return handwriteDataList;
+    public void removeTextData(String id){
+        if(id==null){
+            return;
+        }
+        synchronized (textDataList) {
+            Iterator<CommentData> iterator = textDataList.iterator();
+            while (iterator.hasNext()){
+                CommentData handwritingData = iterator.next();
+                if(id.equals(handwritingData.getId())){
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    public void removeHandwritingImage(List<String> idList){
+        if(idList==null){
+            return;
+        }
+        synchronized (handwritingList) {
+            Iterator<CommentData> iterator = handwritingList.iterator();
+            while (iterator.hasNext()){
+                CommentData handwritingData = iterator.next();
+                for (String id:idList) {
+                    if (id.equals(handwritingData.getId())) {
+                        iterator.remove();
+                    }
+                }
+            }
+        }
+    }
+
+    public List<CommentData> getHandwritePart() {
+        synchronized (handwritingList) {
+            return handwritingList;
+        }
+    }
+
+    public List<CommentData> getTextDataPart() {
+        synchronized (textDataList) {
+            return textDataList;
         }
     }
 

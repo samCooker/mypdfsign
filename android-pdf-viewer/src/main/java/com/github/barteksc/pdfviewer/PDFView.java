@@ -27,15 +27,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import cn.com.chaochuang.writingpen.model.CommentData;
 import cn.com.chaochuang.writingpen.model.SignBitmapData;
-import com.cookie.actionsheet.ActionSheet;
 import cn.com.chaochuang.writingpen.ui.DrawPenView;
+import com.cookie.actionsheet.ActionSheet;
 import com.cookie.actionsheet.OnActionListener;
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
 import com.github.barteksc.pdfviewer.link.DefaultLinkHandler;
 import com.github.barteksc.pdfviewer.link.LinkHandler;
 import com.github.barteksc.pdfviewer.listener.*;
-import com.github.barteksc.pdfviewer.model.HandwritingData;
 import com.github.barteksc.pdfviewer.model.PagePart;
 import com.github.barteksc.pdfviewer.scroll.ScrollHandle;
 import com.github.barteksc.pdfviewer.source.*;
@@ -252,7 +252,7 @@ public class PDFView extends RelativeLayout {
         editActionSheet.setTouchListener(new ActionSheet.ActionSheetTouchListener() {
             @Override
             public void onDismiss() {
-                curEditId = "";
+                editComment = null;
                 redraw();
             }
         });
@@ -261,9 +261,11 @@ public class PDFView extends RelativeLayout {
             public void onSelected(ActionSheet actionSheet, String title) {
                 Log.d("actionsheet",title);
                 if("删除".equals(title)){
-                    callbacks.callOnHandwritingDelete(curEditId);
+                    if(editComment!=null) {
+                        callbacks.callOnHandwritingDelete(editComment.getId());
+                    }
                     actionSheet.dismiss();
-                    curEditId="";
+                    editComment = null;
                 }
             }
         });
@@ -273,7 +275,7 @@ public class PDFView extends RelativeLayout {
         infoActionSheet.setTouchListener(new ActionSheet.ActionSheetTouchListener() {
             @Override
             public void onDismiss() {
-                curEditId = "";
+                editComment = null;
                 redraw();
             }
         });
@@ -627,7 +629,12 @@ public class PDFView extends RelativeLayout {
         }
 
         // 手写签批
-        for (HandwritingData data : cacheManager.getHandwritePart()){
+        for (CommentData data : cacheManager.getHandwritePart()){
+            drawHandwritingPart(canvas, data);
+        }
+
+        // 文字批注
+        for (CommentData data : cacheManager.getTextDataPart()){
             drawHandwritingPart(canvas, data);
         }
 
@@ -727,7 +734,8 @@ public class PDFView extends RelativeLayout {
      * @param canvas
      * @param data
      */
-    private void drawHandwritingPart(Canvas canvas, HandwritingData data){
+    private void drawHandwritingPart(Canvas canvas, CommentData data){
+
         Bitmap renderedBitmap = data.getImageBitmap();
 
         if (renderedBitmap==null||renderedBitmap.isRecycled()) {
@@ -762,7 +770,7 @@ public class PDFView extends RelativeLayout {
         }else{
             canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
 
-            if (curEditId != null && curEditId.equals(data.getId())) {
+            if (editComment != null && editComment.equals(data)) {
                 String dateStr = data.getSignTime()!=null?dateFormat.format(data.getSignTime()):"";
                 String info = "签批人员：" + data.getSignerName() + "\n签批时间：" + dateStr;
 
@@ -868,8 +876,19 @@ public class PDFView extends RelativeLayout {
      * 加入新的手写批注数据
      * @param data
      */
-    public void addHandwritingData(HandwritingData data){
+    public void addHandwritingData(CommentData data){
         cacheManager.cacheHandwriteImage(data);
+    }
+
+    /**
+     * 加入新的文字批注数据
+     * @param data
+     */
+    public void addTextData(CommentData data){
+        //加入文字批注图片
+        Bitmap textBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.ic_text);
+        data.setImageBitmap(textBitmap);
+        cacheManager.cacheTextData(data);
     }
 
     public void removeHandwritingData(String id){
@@ -1647,7 +1666,7 @@ public class PDFView extends RelativeLayout {
      */
     private DrawPenView drawPenView;
     private String userId;
-    private String curEditId;
+    private CommentData editComment;
     //虚线边框padding
     private float editLinePadding = 10f;
     //是否禁止翻页
@@ -1656,7 +1675,7 @@ public class PDFView extends RelativeLayout {
     /**
      * （新添加方法） 显示签批图层
      */
-    public void setSignaturePad(float penWidth,int penColor,boolean penOnly){
+    public void setSignaturePad(float penWidth,int penColor,boolean penOnly,int penType){
 
         LayoutInflater inflater = LayoutInflater.from(this.getContext());
         View signView = inflater.inflate(R.layout.sign_view,this,false);
@@ -1674,13 +1693,13 @@ public class PDFView extends RelativeLayout {
         this.addView(signView);
         drawPenView = signView.findViewById(R.id.view_handwriting);
         doubletapEnabled = false;
-        drawPenView.setPenSetting(penWidth,penColor,penOnly);
+        drawPenView.setPenSetting(penWidth,penColor,penOnly,penType);
 
     }
 
-    public void setPenSetting(float penWidth, int penColor,boolean penOnly){
+    public void setPenSetting(float penWidth, int penColor,boolean penOnly,int penType){
         if(drawPenView!=null){
-            drawPenView.setPenSetting(penWidth,penColor,penOnly);
+            drawPenView.setPenSetting(penWidth,penColor,penOnly,penType);
         }
     }
 
@@ -1723,9 +1742,9 @@ public class PDFView extends RelativeLayout {
         }
     }
 
-    public HandwritingData getSignBitmap(){
+    public CommentData getSignBitmap(){
         if(drawPenView!=null){
-            HandwritingData data = new HandwritingData();
+            CommentData data = new CommentData();
             SignBitmapData bitmapData = drawPenView.getBitmapWithBlank(10);
             data.setImageBitmap(bitmapData.getSignBitmap());
             data.setSignX(getSignX(bitmapData.getMinX()));
@@ -1808,43 +1827,41 @@ public class PDFView extends RelativeLayout {
      * @return
      */
     public boolean checkCanEdit(float x, float y){
-        curEditId = "";
-        List<HandwritingData> dataList = cacheManager.getHandwritePart();
-        if(dataList!=null){
-            for (HandwritingData data:dataList){
-                if(data.getPageNo() == getCurrentPage()){
-//                    SizeF size = pdfFile.getPageSize(data.getPageNo());
-                    //只考虑水平滑动的情况
-                    float localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
-//                    float maxHeight = pdfFile.getMaxPageHeight();
-//                    float localTranslationY = toCurrentScale(maxHeight - size.getHeight()) / 2;
+        editComment = null;
+        List<CommentData> dataList = new ArrayList<>();
+        List<CommentData> handwritingList = cacheManager.getHandwritePart();
+        List<CommentData> textDataList = cacheManager.getTextDataPart();
+        dataList.addAll(handwritingList);
+        dataList.addAll(textDataList);
+        for (CommentData data:dataList){
+            if(data.getPageNo() == getCurrentPage()){
+                //只考虑水平滑动的情况
+                float localTranslationX = pdfFile.getPageOffset(data.getPageNo(), zoom);
+                float pointX;
+                //相对屏幕pdf左上角的坐标
+                if(currentXOffset<0){
+                    //考虑超出屏幕的偏移量
+                    pointX = - currentXOffset + x;
+                }else{
+                    pointX =  x - currentXOffset;
+                }
+                pointX = pointX - localTranslationX;
+                float pointY;
+                if(currentYOffset<0){
+                    //考虑超出屏幕的偏移量
+                    pointY = -currentYOffset + y;
+                }else{
+                    pointY = y - currentYOffset;
+                }
 
-                    float pointX;
-                    //相对屏幕pdf左上角的坐标
-                    if(currentXOffset<0){
-                        //考虑超出屏幕的偏移量
-                        pointX = - currentXOffset + x;
-                    }else{
-                        pointX =  x - currentXOffset;
-                    }
-                    pointX = pointX - localTranslationX;
-                    float pointY;
-                    if(currentYOffset<0){
-                        //考虑超出屏幕的偏移量
-                        pointY = -currentYOffset + y;
-                    }else{
-                        pointY = y - currentYOffset;
-                    }
+                Log.d("touch",pointX + ":" + pointY);
 
-                    Log.d("touch",pointX + ":" + pointY);
-
-                    boolean minFlag = pointX>data.getPx()*getDisplayWRadio()*zoom&&pointY>data.getPy()*getDisplayHRadio()*zoom;
-                    boolean maxFlag = pointX<(data.getPx()+data.getImageWidth())*getDisplayWRadio()*zoom&&pointY<(data.getPy()+data.getImageHeight())*getDisplayHRadio()*zoom;
-                    if(minFlag&&maxFlag) {
-                        curEditId = data.getId();
-                        redraw();
-                        return true;
-                    }
+                boolean minFlag = pointX>data.getPx()*getDisplayWRadio()*zoom&&pointY>data.getPy()*getDisplayHRadio()*zoom;
+                boolean maxFlag = pointX<(data.getPx()+data.getImageWidth())*getDisplayWRadio()*zoom&&pointY<(data.getPy()+data.getImageHeight())*getDisplayHRadio()*zoom;
+                if(minFlag&&maxFlag) {
+                    editComment = data;
+                    redraw();
+                    return true;
                 }
             }
         }
@@ -1852,7 +1869,36 @@ public class PDFView extends RelativeLayout {
         return false;
     }
 
+    /**
+     * 插入文字批注
+     * @param x
+     * @param y
+     * @return
+     */
+    public boolean insertTextComment(float x, float y){
+        float localTranslationX = pdfFile.getPageOffset(getCurrentPage(), zoom);
+        float pointX;
+        //相对屏幕pdf左上角的坐标
+        if(currentXOffset<0){
+            //考虑超出屏幕的偏移量
+            pointX = - currentXOffset + x;
+        }else{
+            pointX =  x - currentXOffset;
+        }
+        pointX = pointX - localTranslationX;
+        float pointY;
+        if(currentYOffset<0){
+            //考虑超出屏幕的偏移量
+            pointY = -currentYOffset + y;
+        }else{
+            pointY = y - currentYOffset;
+        }
 
+        Log.d("touch",pointX + ":" + pointY);
+
+
+        return false;
+    }
 
     public boolean isNotChangePage() {
         return notChangePage;

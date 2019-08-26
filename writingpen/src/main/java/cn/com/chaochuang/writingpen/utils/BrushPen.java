@@ -2,6 +2,7 @@ package cn.com.chaochuang.writingpen.utils;
 
 import android.content.Context;
 import android.graphics.*;
+import android.view.MotionEvent;
 import cn.com.chaochuang.writingpen.R;
 import cn.com.chaochuang.writingpen.model.ControllerPoint;
 
@@ -34,13 +35,6 @@ public class BrushPen extends BasePenExtend {
         setBitmap(mOriginBitmap);
     }
 
-    /**
-     * 感谢公司的ui大哥  小伍哥 免费给的切图
-     * R.mipmap.tranglie 设置的时候有点像三角形的笔锋
-     * R.mipmap.cicrle    圆形的笔锋效果
-     * R.mipmap.six        六边形有点怪怪的，可以测试一下
-     * R.drawable.brush  这个才是用起来比较舒服，如果你的笔锋要很尖的话，叫ui爸爸给你裁剪这种图 越尖越好
-     */
     private void initTexture() {
         //通过资源文件生成的原始的bitmap区域 后面的资源图有些更加有意识的东西
         mOriginBitmap = BitmapFactory.decodeResource(
@@ -71,8 +65,6 @@ public class BrushPen extends BasePenExtend {
         mOldRect.set(0, 0, mBitmap.getWidth()/4, mBitmap.getHeight()/4);
     }
 
-
-
     /**
      * 更具笔的宽度的变化，笔的透明度要和发生变化
      * @param point
@@ -96,7 +88,7 @@ public class BrushPen extends BasePenExtend {
 
     @Override
     protected void doNeetToDo(Canvas canvas, ControllerPoint point, Paint paint) {
-        drawLine(canvas, mCurPoint.x, mCurPoint.y, mCurPoint.width,
+        drawLine2(canvas, mCurPoint.x, mCurPoint.y, mCurPoint.width,
                 mCurPoint.alpha, point.x, point.y, point.width, point.alpha,
                 paint);
     }
@@ -154,6 +146,11 @@ public class BrushPen extends BasePenExtend {
         }
     }
 
+    protected void drawLine2(Canvas canvas, float x0, float y0, float w0,
+                            int a0, float x1, float y1, float w1, int a1, Paint paint) {
+        paint.setAlpha(16);
+        canvas.drawLine(x0,y0,x1,y1,paint);
+    }
 
     @Override
     protected void drawNeetToDo(Canvas canvas) {
