@@ -1,6 +1,7 @@
 package cn.com.chaochuang.pdf_operation.utils;
 
 import android.content.Intent;
+import android.os.Message;
 import android.util.Log;
 import cn.com.chaochuang.pdf_operation.SignPdfView;
 import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
@@ -9,6 +10,9 @@ import com.alibaba.fastjson.JSON;
 import okhttp3.*;
 
 import java.util.concurrent.TimeUnit;
+
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_PDF_PAGE_CHANGE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_CONFIRM_DLG;
 
 /**
  * 2018-5-14
@@ -60,15 +64,15 @@ public class MeetingWsListener extends WebSocketListener {
                 break;
             case WebSocketMessage.TYPE_PAGE_CHANGE:
                 if(signPdfView!=null&&messageInfo.getPageNo()!=null){
-                    Intent intent = new Intent();
-                    intent.setAction(Constants.BC_CHANGE_PAGE);
-                    intent.putExtra(Constants.KEY_PDF_PAGE,messageInfo.getPageNo());
-                    signPdfView.sendBroadcast(intent);
+                    Message msg = Message.obtain();
+                    msg.what = MSG_PDF_PAGE_CHANGE;
+                    msg.arg1 = messageInfo.getPageNo();
+                    signPdfView.sendMessage(msg);
                 }
                 break;
             case WebSocketMessage.TYPE_ERROR_CONN:
                 if(signPdfView!=null){
-                    signPdfView.broadcastIntent(Constants.BC_SHOW_TIP,"服务连接错误");
+                    signPdfView.sendMessage(MSG_SHOW_CONFIRM_DLG,"服务连接错误");
                 }
                 break;
             default:
@@ -81,7 +85,7 @@ public class MeetingWsListener extends WebSocketListener {
         Log.d(TAG,"code:" + code + "onClosed:" + reason);
         closeSocket();
         if(signPdfView!=null) {
-            signPdfView.broadcastIntent(Constants.BC_SHOW_TIP, "已断开连接，请重新打开");
+            signPdfView.sendMessage(MSG_SHOW_CONFIRM_DLG, "已断开连接，请重新打开");
         }
     }
 

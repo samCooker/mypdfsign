@@ -54,8 +54,8 @@ dependencies {
     implementation 'com.android.support:support-compat:28.0.0'
 
 
-    implementation project(path: ':android-pdfium')
     implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation files('pdfium\\android-pdfium-release.aar')
     implementation project(path: ':writingpen')
 
 }

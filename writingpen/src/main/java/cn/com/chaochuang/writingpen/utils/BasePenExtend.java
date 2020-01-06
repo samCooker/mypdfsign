@@ -63,7 +63,7 @@ public abstract class BasePenExtend extends BasePen {
             return;
         //当控制点的集合很少的时候，需要画个小圆，但是需要算法
         if (mHWPointList.size() < 2) {
-            ControllerPoint point = mHWPointList.get(0);
+//            ControllerPoint point = mHWPointList.get(0);
             //由于此问题在算法上还没有实现，所以暂时不给他画圆圈
             //canvas.drawCircle(point.x, point.y, point.width, mPaint);
         } else {
@@ -138,7 +138,7 @@ public abstract class BasePenExtend extends BasePen {
         mHWPointList.clear();
         //记录down的控制点的信息
         ControllerPoint curPoint = new ControllerPoint(mElement.x, mElement.y);
-        //如果用笔画的画我的屏幕，记录他宽度的和压力值的乘，但是哇，
+        //如果用笔画的画我的屏幕，记录他宽度的和压力值的乘，
         if (mElement.tooltype == MotionEvent.TOOL_TYPE_STYLUS) {
             mLastWidth = mElement.pressure * mBaseWidth;
         } else {
@@ -271,7 +271,6 @@ public abstract class BasePenExtend extends BasePen {
         if (mMoveThres > IPenConfig.WIDTH_THRES_MAX) {
             mMoveThres = IPenConfig.WIDTH_THRES_MAX;
         }
-        // TODO: 2018/2/24   以下的方法 可以删除掉  原因是抽取了一下 ，本来不应该在这里的出现的  不好意思 
 //        //滑动越慢的情况下，得到的calWidth 和上面的calwidth 相差的值不一样
 //
 //        //滑动的越快的话，第一个判断会走

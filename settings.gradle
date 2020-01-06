@@ -1,1 +1,1 @@
-include ':app', ':android-pdf-viewer', ':pdf-operation', ':android-pdfium', ':comlibs', ':writingpen'
+include ':app', ':android-pdf-viewer', ':pdf-operation', ':comlibs', ':writingpen', ':inkApi'

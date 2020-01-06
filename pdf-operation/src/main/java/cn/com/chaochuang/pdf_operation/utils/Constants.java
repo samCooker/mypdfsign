@@ -47,18 +47,13 @@ public class Constants {
     public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
     public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
 
-    public static final String BC_HANDWRITING_LIST="handwritingList";
-    public static final String BC_SHOW_TIP ="showTip";
-    public static final String BC_SHOW_LOADING ="showLoading";
-    public static final String BC_HIDE_LOADING ="hideLoading";
-    public static final String BC_RESPONSE_FAILURE ="responseFailure";
-    public static final String BC_RESPONSE_SUCCESS ="responseSuccess";
-    public static final String BC_SAVE_HANDWRITING="saveHandwriting";
-    public static final String BC_DELETE_HANDWRITING="deleteHandwriting";
-    public static final String BC_SAVE_HANDWRITING_SUCCESS="saveHandwritingSuccess";
-    public static final String BC_DOWNLOAD_FILE="downloadFile";
-    public static final String BC_DOWNLOAD_FILE_FINISH="downloadFileFinish";
-    public static final String BC_REFRESH_PDF_VIEW="refreshPdfView";
-    public static final String BC_CHANGE_PAGE="changePage";
-    public static final String BC_SCROLL_TO="scrollTo";
+    public static final int MSG_FIND_COMMENT_LIST =1;
+    public static final int MSG_SAVE_COMMENT_LIST =2;
+    public static final int MSG_DEL_COMMENT_LIST =3;
+    public static final int MSG_SHOW_CONFIRM_DLG =4;
+    public static final int MSG_SHOW_LOADING =5;
+    public static final int MSG_HIDE_LOADING =6;
+    public static final int MSG_REFRESH_PDF_VIEW =7;
+    public static final int MSG_PDF_PAGE_CHANGE =8;
+    public static final int MSG_RESPONSE_MSG =9;
 }

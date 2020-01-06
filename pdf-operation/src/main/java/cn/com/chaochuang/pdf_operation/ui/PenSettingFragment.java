@@ -55,9 +55,9 @@ public class PenSettingFragment extends DialogFragment {
     private PenWidthView penWidthView;
     private Switch penOnlySwitch;
 
-//    private RadioGroup penTypeGroup;
-//    private RadioButton normalPenBtn;
-//    private RadioButton brushPenBtn;
+    private RadioGroup penTypeGroup;
+    private RadioButton normalPenBtn;
+    private RadioButton brushPenBtn;
 
     private int penMaxWidth = 80;
     private int penMinWidth = 2;
@@ -208,35 +208,35 @@ public class PenSettingFragment extends DialogFragment {
             }
         });
 
-        int min = penMinWidth;
+        int min;
 
-//        penTypeGroup = settingContent.findViewById(R.id.rg_pen_type);
-//        normalPenBtn = settingContent.findViewById(R.id.rg_pen_normal);
-//        brushPenBtn = settingContent.findViewById(R.id.rg_pen_brush);
-//        if(STROKE_TYPE_BRUSH == penType){
-//            brushPenBtn.setChecked(true);
-//            min = brushMinWidth;
-//        }else{
-//            normalPenBtn.setChecked(true);
-//            min = penMinWidth;
-//        }
-//        penTypeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-//            @Override
-//            public void onCheckedChanged(RadioGroup group, int checkedId) {
-//                int _penMinWidth = penMinWidth;
-//                if(checkedId == R.id.rg_pen_normal){
-//                    normalPenBtn.setChecked(true);
-//                    _penMinWidth = penMinWidth;
-//                    penType = STROKE_TYPE_PEN;
-//                }else if(checkedId == R.id.rg_pen_brush){
-//                    brushPenBtn.setChecked(true);
-//                    _penMinWidth = brushMinWidth;
-//                    penType = STROKE_TYPE_BRUSH;
-//                }
-//
-//                setSeekBarWidth(_penMinWidth);
-//            }
-//        });
+        penTypeGroup = settingContent.findViewById(R.id.rg_pen_type);
+        normalPenBtn = settingContent.findViewById(R.id.rg_pen_normal);
+        brushPenBtn = settingContent.findViewById(R.id.rg_pen_brush);
+        if(STROKE_TYPE_BRUSH == penType){
+            brushPenBtn.setChecked(true);
+            min = brushMinWidth;
+        }else{
+            normalPenBtn.setChecked(true);
+            min = penMinWidth;
+        }
+        penTypeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                int _penMinWidth = penMinWidth;
+                if(checkedId == R.id.rg_pen_normal){
+                    normalPenBtn.setChecked(true);
+                    _penMinWidth = penMinWidth;
+                    penType = STROKE_TYPE_PEN;
+                }else if(checkedId == R.id.rg_pen_brush){
+                    brushPenBtn.setChecked(true);
+                    _penMinWidth = brushMinWidth;
+                    penType = STROKE_TYPE_BRUSH;
+                }
+
+                setSeekBarWidth(_penMinWidth);
+            }
+        });
 
         setSeekBarWidth(min);
     }

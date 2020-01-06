@@ -2,7 +2,6 @@ package cn.com.chaochuang.writingpen.utils;
 
 import android.content.Context;
 import android.graphics.*;
-import android.view.MotionEvent;
 import cn.com.chaochuang.writingpen.R;
 import cn.com.chaochuang.writingpen.model.ControllerPoint;
 
@@ -148,7 +147,6 @@ public class BrushPen extends BasePenExtend {
 
     protected void drawLine2(Canvas canvas, float x0, float y0, float w0,
                             int a0, float x1, float y1, float w1, int a1, Paint paint) {
-        paint.setAlpha(16);
         canvas.drawLine(x0,y0,x1,y1,paint);
     }
 

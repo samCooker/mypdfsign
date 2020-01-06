@@ -11,6 +11,8 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -49,6 +51,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -77,7 +80,7 @@ public class SignPdfView extends AppCompatActivity {
 
     private OkHttpUtil httpUtil;
     private MeetingWsListener meetingWsListener;
-    private PdfActionReceiver pdfActionReceiver;
+    private MyHandler actionHandler;
 
     private PenSettingFragment penSettingFragment;
     private TextInputFragment textInputFragment;
@@ -122,12 +125,14 @@ public class SignPdfView extends AppCompatActivity {
     private AppCompatButton btnClose, btnClear, btnSave, btnPen , btnErase , btnSubmit;
 
     private boolean eraseFlag = false;
+    private boolean isDestroy = false;
 
     private int REQ_CODE=100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        isDestroy = false;
         setContentView(R.layout.act_sign_pdf);
 
         //获取本地数据
@@ -177,8 +182,9 @@ public class SignPdfView extends AppCompatActivity {
             }
         });
 
-        //广播事件
-        this.initBroadcastReceiver();
+        //事件
+        actionHandler = new MyHandler(this);
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         //获取权限
@@ -199,6 +205,7 @@ public class SignPdfView extends AppCompatActivity {
                 ActivityCompat.requestPermissions(this, permissions, REQ_CODE);
             }else{
                 downloadOrOpenFile();
+
             }
         }
     }
@@ -290,7 +297,7 @@ public class SignPdfView extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(pdfView.hasHandwriting()){
-                    broadcastIntent(BC_SHOW_LOADING,"正在保存");
+                    sendMessage(MSG_SHOW_LOADING,"正在保存");
                     new Thread(){
                         @Override
                         public void run() {
@@ -318,7 +325,7 @@ public class SignPdfView extends AppCompatActivity {
                                 //保存到远程服务器
                                 saveHandwritingData(handwritingData);
                             }else{
-                                broadcastIntent(BC_HIDE_LOADING);
+                                sendMessage(MSG_HIDE_LOADING,null);
                             }
                         }
                     }.start();
@@ -409,7 +416,7 @@ public class SignPdfView extends AppCompatActivity {
                     httpUtil.get(serverUrl + URL_FIND_MEETING_MEMBERS + "?recordId=" + meetingRecordId, new Callback() {
                         @Override
                         public void onFailure(Call call, IOException e) {
-                            broadcastIntent(BC_RESPONSE_FAILURE);
+                            sendMessage(MSG_RESPONSE_MSG,"操作失败");
                         }
 
                         @Override
@@ -430,11 +437,11 @@ public class SignPdfView extends AppCompatActivity {
                                         }
                                     });
                                 }else{
-                                    broadcastIntent(BC_RESPONSE_FAILURE);
+                                    sendMessage(MSG_RESPONSE_MSG,"操作失败");
                                 }
 
                             }else {
-                                broadcastIntent(BC_RESPONSE_FAILURE);
+                                sendMessage(MSG_RESPONSE_MSG,"操作失败");
                             }
                         }
                     });
@@ -558,33 +565,6 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
-
-    private void initBroadcastReceiver() {
-        pdfActionReceiver = new PdfActionReceiver();
-
-        IntentFilter handwritingListFilter = new IntentFilter(BC_HANDWRITING_LIST);
-        IntentFilter resSuccessFilter = new IntentFilter(BC_RESPONSE_SUCCESS);
-        IntentFilter showLoadingFilter = new IntentFilter(BC_SHOW_LOADING);
-        IntentFilter hideLoadingFilter = new IntentFilter(BC_HIDE_LOADING);
-        IntentFilter resFailureFilter = new IntentFilter(BC_RESPONSE_FAILURE);
-        IntentFilter saveSuccessFilter = new IntentFilter(BC_SAVE_HANDWRITING_SUCCESS);
-        IntentFilter deleteSuccessFilter = new IntentFilter(BC_DELETE_HANDWRITING);
-        IntentFilter showTipFilter = new IntentFilter(BC_SHOW_TIP);
-        IntentFilter refreshPdfViewFilter = new IntentFilter(BC_REFRESH_PDF_VIEW);
-        IntentFilter pageChangeFilter = new IntentFilter(BC_CHANGE_PAGE);
-
-        registerReceiver(pdfActionReceiver,handwritingListFilter);
-        registerReceiver(pdfActionReceiver,resFailureFilter);
-        registerReceiver(pdfActionReceiver,resSuccessFilter);
-        registerReceiver(pdfActionReceiver,showLoadingFilter);
-        registerReceiver(pdfActionReceiver,hideLoadingFilter);
-        registerReceiver(pdfActionReceiver,saveSuccessFilter);
-        registerReceiver(pdfActionReceiver,deleteSuccessFilter);
-        registerReceiver(pdfActionReceiver,showTipFilter);
-        registerReceiver(pdfActionReceiver,refreshPdfViewFilter);
-        registerReceiver(pdfActionReceiver,pageChangeFilter);
-    }
-
     public void openPdfFile(){
         pdfView.fromFile(new File(filePath))
                 .defaultPage(currentPage)
@@ -672,7 +652,7 @@ public class SignPdfView extends AppCompatActivity {
             httpUtil.post(serverUrl + URL_HANDWRITING_SAVE, "jsonData="+JSON.toJSONString(saveBean), new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    broadcastIntent(BC_RESPONSE_FAILURE);
+                    sendMessage(MSG_RESPONSE_MSG,"操作失败");
                 }
 
                 @Override
@@ -684,13 +664,13 @@ public class SignPdfView extends AppCompatActivity {
                             //添加到图层
                             handwritingData.setId(resData.getData().toString());
                             pdfView.addHandwritingData(handwritingData);
-                            broadcastIntent(BC_SAVE_HANDWRITING_SUCCESS,handwritingData.getId());
+                            sendMessage(MSG_SAVE_COMMENT_LIST,handwritingData.getId());
                         }else{
-                            broadcastIntent(BC_RESPONSE_FAILURE);
+                            sendMessage(MSG_RESPONSE_MSG,"操作失败");
                         }
 
                     }else {
-                        broadcastIntent(BC_RESPONSE_FAILURE);
+                        sendMessage(MSG_RESPONSE_MSG,"操作失败");
                     }
                 }
             });
@@ -712,12 +692,12 @@ public class SignPdfView extends AppCompatActivity {
             pdfView.addTextData(commentData);
         }
 
-        broadcastIntent(BC_REFRESH_PDF_VIEW);
+        sendMessage(MSG_REFRESH_PDF_VIEW,null);
     }
 
     public void removeHandwritingData(String id){
         pdfView.removeHandwritingData(id);
-        broadcastIntent(BC_REFRESH_PDF_VIEW);
+        sendMessage(MSG_REFRESH_PDF_VIEW,null);
     }
 
     public void jumpToPage(int page){
@@ -726,11 +706,11 @@ public class SignPdfView extends AppCompatActivity {
 
     private void deleteCommentById(final String id){
         if(id!=null){
-            broadcastIntent(BC_SHOW_LOADING,"正在删除");
+            sendMessage(MSG_SHOW_LOADING,"正在删除");
             httpUtil.get(serverUrl + URL_HANDWRITING_DELETE + "?id="+id, new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    broadcastIntent(BC_RESPONSE_FAILURE);
+                    sendMessage(MSG_RESPONSE_MSG,"操作失败");
                 }
 
                 @Override
@@ -739,13 +719,13 @@ public class SignPdfView extends AppCompatActivity {
                         String data = response.body().string();
                         AppResponse resData = JSON.parseObject(data, AppResponse.class);
                         if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())){
-                            broadcastIntent(BC_DELETE_HANDWRITING,id);
+                            sendMessage(MSG_DEL_COMMENT_LIST,id);
                         }else{
-                            broadcastIntent(BC_RESPONSE_FAILURE);
+                            sendMessage(MSG_RESPONSE_MSG,"操作失败");
                         }
 
                     }else {
-                        broadcastIntent(BC_RESPONSE_FAILURE);
+                        sendMessage(MSG_RESPONSE_MSG,"操作失败");
                     }
                 }
             });
@@ -756,11 +736,11 @@ public class SignPdfView extends AppCompatActivity {
      * 下载文件
      */
     private void downloadOrOpenFile(){
-        broadcastIntent(BC_SHOW_LOADING,"正在下载文件");
+        sendMessage(MSG_SHOW_LOADING,"正在下载文件");
         httpUtil.get(serverUrl + URL_GET_MD5 + "?fileId=" + fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+                sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
             }
 
             @Override
@@ -784,12 +764,12 @@ public class SignPdfView extends AppCompatActivity {
                                 downloadFile(pdfFile);
                             }
                         }else{
-                            broadcastIntent(BC_RESPONSE_FAILURE,"文件打开失败");
+                            sendMessage(MSG_RESPONSE_MSG,"文件打开失败");
                         }
 
                     }
                 }else{
-                    broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+                    sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
                 }
             }
         });
@@ -804,7 +784,7 @@ public class SignPdfView extends AppCompatActivity {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败，请尝试重新打开");
+                sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
             }
 
             @Override
@@ -814,7 +794,7 @@ public class SignPdfView extends AppCompatActivity {
                 FileOutputStream fos = null;
                 try {
                     if (call.isCanceled()) {
-                        broadcastIntent(BC_RESPONSE_FAILURE,"已取消文件下载");
+                        sendMessage(MSG_RESPONSE_MSG,"已取消文件下载");
                         return;
                     }
                     if (response.isSuccessful()) {
@@ -833,16 +813,16 @@ public class SignPdfView extends AppCompatActivity {
                             int progress = (int) (100 * current / total);
                             Log.d(TAG,"下载进度："+progress);
                         }
-                        broadcastIntent(BC_HIDE_LOADING);
+                        sendMessage(MSG_HIDE_LOADING,null);
                         filePath = file.getAbsolutePath();
                         findHandwritingData();
                     } else {
-                        broadcastIntent(BC_HIDE_LOADING);
-                        broadcastIntent(BC_RESPONSE_FAILURE,"文件下载失败");
+                        sendMessage(MSG_HIDE_LOADING,null);
+                        sendMessage(MSG_RESPONSE_MSG,"文件下载失败");
                     }
                 } catch (Exception e) {
-                    broadcastIntent(BC_HIDE_LOADING);
-                    broadcastIntent(BC_RESPONSE_FAILURE,"文件下载异常");
+                    sendMessage(MSG_HIDE_LOADING,null);
+                    sendMessage(MSG_RESPONSE_MSG,"文件下载异常");
                 } finally {
                     if (null != responseBody) {
                         responseBody.close();
@@ -868,11 +848,11 @@ public class SignPdfView extends AppCompatActivity {
 
     private void findPdfHandwriting(){
         //查询批注数据
-        broadcastIntent(BC_SHOW_LOADING,"正在打开文件");
+        sendMessage(MSG_SHOW_LOADING,"正在打开文件");
         httpUtil.get(serverUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                broadcastIntent(BC_RESPONSE_FAILURE,"请求错误");
+                sendMessage(MSG_RESPONSE_MSG,"请求错误");
             }
 
             @Override
@@ -885,10 +865,10 @@ public class SignPdfView extends AppCompatActivity {
                         httpUtil.setHandwritingList(commentBean.getHandwritingList());
                         httpUtil.setTextDataList(commentBean.getTextDataList());
                     }
-                    broadcastIntent(BC_HANDWRITING_LIST);
+                    sendMessage(MSG_FIND_COMMENT_LIST,null);
                 }else {
                     String msg = "文件打开失败，请尝试重新打开";
-                    broadcastIntent(BC_RESPONSE_FAILURE,msg);
+                    sendMessage(MSG_RESPONSE_MSG,msg);
                 }
             }
         });
@@ -896,11 +876,11 @@ public class SignPdfView extends AppCompatActivity {
 
     private void findMeetingHandwriting(){
         //查询批注数据
-        broadcastIntent(BC_SHOW_LOADING,"正在打开文件");
+        sendMessage(MSG_SHOW_LOADING,"正在打开文件");
         httpUtil.get(serverUrl + Constants.URL_FIND_MEETING_HANDWRITING+"?fileId="+fileId+"&recordId="+meetingRecordId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                broadcastIntent(BC_RESPONSE_FAILURE,"请求错误");
+                sendMessage(MSG_RESPONSE_MSG,"请求错误");
             }
 
             @Override
@@ -916,10 +896,10 @@ public class SignPdfView extends AppCompatActivity {
                             currentPage = commentBean.getCurPage();
                         }
                     }
-                    broadcastIntent(BC_HANDWRITING_LIST);
+                    sendMessage(MSG_FIND_COMMENT_LIST,null);
                 }else {
                     String msg = "文件打开失败，请尝试重新打开";
-                    broadcastIntent(BC_RESPONSE_FAILURE,msg);
+                    sendMessage(MSG_RESPONSE_MSG,msg);
                 }
             }
         });
@@ -984,11 +964,6 @@ public class SignPdfView extends AppCompatActivity {
         actionsMenu.addView(btnPen);
     }
 
-    private void showProgressDialog(){
-        if(progressDialog!=null){
-            progressDialog.show();
-        }
-    }
     private void showProgressDialog(String msg){
         if(progressDialog!=null){
             progressDialog.setMessage(msg);
@@ -1001,117 +976,159 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
-
-    //广播事件
-    public void broadcastIntent(String actionName,String message){
-        Intent intent = new Intent();
-        intent.setAction(actionName);
-        intent.putExtra(KEY_SHOW_MESSAGE,message);
-        sendBroadcast(intent);
-    }
-    public void broadcastIntent(String actionName){
-        Intent intent = new Intent();
-        intent.setAction(actionName);
-        sendBroadcast(intent);
+    private void httpResponseMsg(String msg){
+        hideProgressDialog();
+        Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
     }
 
-    public class PdfActionReceiver extends BroadcastReceiver{
+    private void refreshPdfView(){
+        if(pdfView!=null){
+            pdfView.invalidate();
+        }
+    }
+
+    private void showConfirmDialog(String msg){
+        AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+        builder.setMessage(msg);
+        builder.setTitle("提示信息");
+        builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        final Dialog dialog = builder.create();
+        dialog.setCancelable(true);
+        dialog.show();
+    }
+
+    /**
+     * 查询批注成功
+     */
+    private void findCommentSuccess(){
+        hideProgressDialog();
+        List<CommentData> dataList = httpUtil.getHandwritingList();
+        if(dataList!=null){
+            for (CommentData dataBean:dataList){
+                if(CommentData.TYPE_HANDWRITING.equals(dataBean.getSignType())){
+                    if(dataBean.getSignContent()!=null&&!"".equals(dataBean.getSignContent().trim())){
+                        Bitmap bitmap = ImageTools.base64ToBitmap(dataBean.getSignContent());
+                        dataBean.setImageBitmap(bitmap);
+                    }
+                    pdfView.addHandwritingData(dataBean);
+                }else if(CommentData.TYPE_TEXT.equals(dataBean.getSignType())){
+                    pdfView.addTextData(dataBean);
+                }
+            }
+        }
+        //打开PDF文件
+        openPdfFile();
+        //显示按钮
+        addActionBtns();
+    }
+
+    /**
+     * 批注保存成功
+     */
+    private void saveCommentSuccess(String id){
+        hideProgressDialog();
+        //刷新页面
+        pdfView.invalidate();
+        pdfView.signClear();
+        Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
+        if(meetingWsListener!=null&&isHost){
+            //同步模式
+            meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_ADD,meetingRecordId,id);
+        }
+        //退出签批模式
+        pdfView.hideSignView();
+        addActionBtns();
+    }
+
+    /**
+     * 删除批注成功
+     * @param id
+     */
+    private void deleteCommentSuccess(String id){
+        hideProgressDialog();
+        pdfView.removeHandwritingData(id);
+        if(pdfView!=null){
+            pdfView.invalidate();
+        }
+        if(meetingWsListener!=null&&isHost){
+            //同步模式
+            meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_DELETE,meetingRecordId,id);
+        }
+    }
+
+    /**
+     * 发送消息
+     * @param what
+     * @param message
+     */
+    public void sendMessage(int what,String message){
+        Message msg = Message.obtain();
+        msg.what = what;
+        msg.obj = message;
+        actionHandler.sendMessage(msg);
+    }
+    public void sendMessage(Message msg){
+        actionHandler.sendMessage(msg);
+    }
+    /**
+     *
+     */
+    private static class MyHandler extends Handler{
+
+        private final WeakReference<SignPdfView> signPdfViewRef;
+
+        public MyHandler(SignPdfView signPdfView) {
+            signPdfViewRef = new WeakReference<>(signPdfView);
+        }
 
         @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            String msg = intent.getStringExtra(KEY_SHOW_MESSAGE);
-            if(action==null){
+        public void handleMessage(Message msg) {
+            SignPdfView signPdfView = signPdfViewRef.get();
+            if(signPdfView.isDestroy){
                 return;
             }
-            switch (action){
-                case BC_SHOW_LOADING:
-                    showProgressDialog(msg);
+            Object dataObj = msg.obj;
+            switch (msg.what){
+                case MSG_FIND_COMMENT_LIST:
+                    signPdfView.findCommentSuccess();
                     break;
-                case BC_HIDE_LOADING:
-                    hideProgressDialog();
-                    break;
-                case BC_HANDWRITING_LIST:
-                    hideProgressDialog();
-                    List<CommentData> dataList = httpUtil.getHandwritingList();
-                    if(dataList!=null){
-                        for (CommentData dataBean:dataList){
-                            if(CommentData.TYPE_HANDWRITING.equals(dataBean.getSignType())){
-                                if(dataBean.getSignContent()!=null&&!"".equals(dataBean.getSignContent().trim())){
-                                    Bitmap bitmap = ImageTools.base64ToBitmap(dataBean.getSignContent());
-                                    dataBean.setImageBitmap(bitmap);
-                                }
-                                pdfView.addHandwritingData(dataBean);
-                            }else if(CommentData.TYPE_TEXT.equals(dataBean.getSignType())){
-                                pdfView.addTextData(dataBean);
-                            }
-                        }
-                    }
-                    //打开PDF文件
-                    openPdfFile();
-                    //显示按钮
-                    addActionBtns();
-                    break;
-                case BC_RESPONSE_FAILURE:
-                    hideProgressDialog();
-                    if(msg==null){
-                        msg = "操作失败";
-                    }
-                    Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
-                    break;
-                case BC_RESPONSE_SUCCESS:
-                    hideProgressDialog();
-                    if(msg==null){
-                        msg = "操作成功";
-                    }
-                    Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
-                    break;
-                case BC_SAVE_HANDWRITING_SUCCESS:
-                    hideProgressDialog();
-                    //刷新页面
-                    pdfView.invalidate();
-                    pdfView.signClear();
-                    Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
-                    if(meetingWsListener!=null&&isHost){
-                        //同步模式
-                        meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_ADD,meetingRecordId,msg);
-                    }
-                    //退出签批模式
-                    pdfView.hideSignView();
-                    addActionBtns();
-                    break;
-                case BC_DELETE_HANDWRITING:
-                    hideProgressDialog();
-                    removeHandwritingData(msg);
-                    if(meetingWsListener!=null&&isHost){
-                        //同步模式
-                        meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_DELETE,meetingRecordId,msg);
+                case MSG_SAVE_COMMENT_LIST:
+                    if(dataObj!=null) {
+                        signPdfView.saveCommentSuccess(dataObj.toString());
                     }
                     break;
-                case BC_SHOW_TIP:
-                    Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
-                    builder.setMessage(msg);
-                    builder.setTitle("提示信息");
-                    builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                        }
-                    });
-                    final Dialog dialog = builder.create();
-                    dialog.setCancelable(false);
-                    dialog.show();
-                    break;
-                case BC_REFRESH_PDF_VIEW:
-                    if(pdfView!=null){
-                        pdfView.invalidate();
+                case MSG_DEL_COMMENT_LIST:
+                    if(dataObj!=null) {
+                        signPdfView.deleteCommentSuccess(dataObj.toString());
                     }
                     break;
-                case BC_CHANGE_PAGE:
-                    int page = intent.getIntExtra(KEY_PDF_PAGE,0);
-                    if(pdfView!=null) {
-                        pdfView.jumpTo(page, true);
+                case MSG_SHOW_CONFIRM_DLG:
+                    if(dataObj!=null){
+                        signPdfView.showConfirmDialog(dataObj.toString());
+                    }
+                    break;
+                case MSG_HIDE_LOADING:
+                    signPdfView.hideProgressDialog();
+                    break;
+                case MSG_SHOW_LOADING:
+                    if(dataObj!=null) {
+                        signPdfView.showProgressDialog(dataObj.toString());
+                    }
+                    break;
+                case MSG_REFRESH_PDF_VIEW:
+                    signPdfView.refreshPdfView();
+                    break;
+                case MSG_PDF_PAGE_CHANGE:
+                    signPdfView.jumpToPage(msg.arg1);
+                    break;
+                case MSG_RESPONSE_MSG:
+                    if(dataObj!=null) {
+                        signPdfView.httpResponseMsg(dataObj.toString());
                     }
                     break;
                 default:
@@ -1119,11 +1136,10 @@ public class SignPdfView extends AppCompatActivity {
         }
     }
 
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(pdfActionReceiver);
+        isDestroy = true;
         if(meetingWsListener!=null) {
             meetingWsListener.closeSocket();
         }
