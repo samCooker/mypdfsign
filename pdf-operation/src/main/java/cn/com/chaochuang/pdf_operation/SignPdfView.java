@@ -207,6 +207,8 @@ public class SignPdfView extends AppCompatActivity {
                 downloadOrOpenFile();
 
             }
+        }else{
+            downloadOrOpenFile();
         }
     }
 

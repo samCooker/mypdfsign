@@ -16,14 +16,14 @@ public class MainActivity extends Activity {
         Intent intent = new Intent(this,SignPdfView.class);
         intent.putExtra(Constants.PARAM_USER_ID, "1");
         intent.putExtra(Constants.PARAM_USER_NAME, "测试人员");
-        intent.putExtra(Constants.PARAM_FILE_ID, "2c9f80816c949811016c949ce40b0000");
+        intent.putExtra(Constants.PARAM_FILE_ID, "40289fbc6f6a130d016f6a22cbc20000");
         intent.putExtra(Constants.KEY_SERVER_URL, "http://192.168.31.60:8089/pdf_handwriting/");
         intent.putExtra(Constants.KEY_WEB_SOCKET_URL, "ws://192.168.31.60:8089/pdf_handwriting/meeting/ws/");
 //        intent.putExtra(Constants.KEY_MEETING_REOCRD_ID, "1");
         intent.putExtra(Constants.KEY_IS_HOST, true);
         intent.putExtra(Constants.KEY_PEN_ONLY, false);
         intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU3ODM4MDczOH0._riSfN9RszdZhMXKe5EmJFb-WE-g7MBf_8-RziCs1pw");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4MjIxMDkwMn0.NGn4VMwOinRyTwZB-1t4OrqdthZbAJuTbPf5LRKZrwo");
         startActivityForResult(intent,1001);
 
     }

@@ -39,28 +39,28 @@
     </LinearLayout>
 
 
-<!--    <LinearLayout-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:orientation="horizontal"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:padding="10dp">-->
-<!--        <RadioGroup android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/rg_pen_type">-->
-<!--            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="普通笔  " android:id="@+id/rg_pen_normal" android:layout_marginRight="30dp" android:drawableRight="@drawable/pen_ballpen"/>-->
-<!--            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="笔  刷  " android:id="@+id/rg_pen_brush" android:drawableRight="@drawable/pen_waterpen"/>-->
-<!--        </RadioGroup>-->
-<!--    </LinearLayout>-->
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:orientation="horizontal"
+            android:layout_height="wrap_content"
+            android:padding="10dp">
+        <RadioGroup android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/rg_pen_type">
+            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="普通笔  " android:id="@+id/rg_pen_normal" android:layout_marginRight="30dp" android:drawableRight="@drawable/pen_ballpen"/>
+            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="笔  刷  " android:id="@+id/rg_pen_brush" android:drawableRight="@drawable/pen_waterpen"/>
+        </RadioGroup>
+    </LinearLayout>
 
-<!--    <LinearLayout-->
-<!--            android:padding="10dp"-->
-<!--            android:orientation="horizontal"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content">-->
-<!--        <Switch-->
-<!--                android:text="手写笔输入"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:id="@+id/sw_pen_only"/>-->
-<!--    </LinearLayout>-->
+    <LinearLayout
+            android:padding="10dp"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+        <Switch
+                android:text="手写笔输入"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/sw_pen_only"/>
+    </LinearLayout>
 
     <GridView
             android:id="@+id/gv_pen_color"

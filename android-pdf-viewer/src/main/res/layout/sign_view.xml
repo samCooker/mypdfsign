@@ -3,20 +3,20 @@
              android:layout_width="match_parent"
              android:layout_height="match_parent">
 
-    <!--<com.github.gcacace.signaturepad.views.SignaturePad-->
-            <!--android:layout_width="match_parent"-->
-            <!--android:layout_height="match_parent"-->
-            <!--android:id="@+id/signature_pad" />-->
-
-<!--    <cn.com.chaochuang.writingpen.ui.DrawPenView-->
+<!--    <com.github.gcacace.signaturepad.views.SignaturePad-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="match_parent"-->
-<!--            android:id="@+id/view_handwriting"-->
-<!--    />-->
+<!--            android:id="@+id/signature_pad" />-->
 
-    <com.ebensz.eink.api.PennableLayout
-            android:id="@+id/view_handwriting"
+    <cn.com.chaochuang.writingpen.ui.DrawPenView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:id="@+id/view_handwriting"
             />
+
+<!--    <com.ebensz.eink.api.PennableLayout-->
+<!--            android:id="@+id/view_handwriting"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent"-->
+<!--            />-->
 </LinearLayout>
