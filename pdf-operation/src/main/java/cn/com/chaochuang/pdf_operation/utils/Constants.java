@@ -22,7 +22,11 @@ public class Constants {
     public static final String KEY_SERVER_TOKEN="serverToken";
     public static final String KEY_PEN_ONLY="penOnly";
     public static final String KEY_CURRENT_PAGE="currentPage";
+    //是否显示提交按钮
     public static final String KEY_IS_DOC_MODE="isDocMode";
+    //是否只读模式
+    public static final String KEY_IS_READ_MODE="isReadMode";
+    public static final String KEY_IS_HIDE_ANNOT="hideAnnot";
 
     //公文手写签批相关
     public static final String KEY_DOC_ID="docId";
@@ -42,6 +46,7 @@ public class Constants {
     public static final String URL_HANDWRITING_LIST ="comment/list.mo";
     public static final String URL_HANDWRITING_SAVE ="comment/save.mo";
     public static final String URL_HANDWRITING_DELETE ="comment/delete.mo";
+    public static final String URL_SAVE_PDF ="comment/savetopdf.mo";
     public static final String URL_GET_MD5 ="comment/getmdf.mo";
     public static final String URL_DOWNLOAD_FILE ="comment/download.mo";
     public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
@@ -56,4 +61,5 @@ public class Constants {
     public static final int MSG_REFRESH_PDF_VIEW =7;
     public static final int MSG_PDF_PAGE_CHANGE =8;
     public static final int MSG_RESPONSE_MSG =9;
+    public static final int MSG_DOWNLOAD_ERROR =10;
 }

@@ -22,6 +22,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -117,6 +118,10 @@ public class SignPdfView extends AppCompatActivity {
      */
     private boolean isDocMode = false;
     private boolean isTextInput = false;
+    private boolean modifyFlag = false;
+
+    private boolean readMode = false;
+    private boolean hideAnnot = false;
 
     private AppCompatButton handWriteItem,closeViewItem,meetingMemItem,jumpToItem,textInputItem;
     /**
@@ -128,6 +133,7 @@ public class SignPdfView extends AppCompatActivity {
     private boolean isDestroy = false;
 
     private int REQ_CODE=100;
+    private long exitTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -226,64 +232,86 @@ public class SignPdfView extends AppCompatActivity {
 
         initCommonBtn();
 
-        //region 手写批注
-        handWriteItem = getMenuButton(getResources().getDrawable(R.drawable.ic_pen),"手 写");
-        handWriteItem.setOnClickListener(new View.OnClickListener() {
+        //region 跳转到按钮
+        jumpToItem = getMenuButton(getResources().getDrawable(R.drawable.ic_jump_to), "跳转到");
+        jumpToItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
-                int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
-                int penType = penSettingData.getInt(PenSettingFragment.PEN_TYPE,PenSettingFragment.STROKE_TYPE_PEN);
-                pdfView.setSignaturePad(penWidth,penColor,penOnly,penType);
-                addHandWriteBtns();
+                jumpToFragment.showFragmentDlg(getSupportFragmentManager(), "PdfJumpToFragment", pdfView.getCurrentPage() + 1, pdfView.getPageCount());
             }
         });
         //endregion
 
         //region 关闭PDF预览页面
-        closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_close),"关 闭");
+        closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_close), "关 闭");
         closeViewItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setResult(100);
-                finish();
+                closePdfView();
             }
         });
         //endregion
 
+        //region 手写批注
+        handWriteItem = getMenuButton(getResources().getDrawable(R.drawable.ic_pen), "手 写");
+        handWriteItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH, PenSettingFragment.defaultWidth);
+                int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
+                int penType = penSettingData.getInt(PenSettingFragment.PEN_TYPE, PenSettingFragment.STROKE_TYPE_PEN);
+                pdfView.setSignaturePad(penWidth, penColor, penOnly, penType);
+                addHandWriteBtns();
+            }
+        });
+        //endregion
+
+        //公文提交按钮
+        if (isDocMode) {
+            btnSubmit = getMenuButton(getResources().getDrawable(R.drawable.ic_submit), "提 交");
+            btnSubmit.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.putExtra("docSubmitFlag", true);
+                    intent.putExtra("modifyFlag", modifyFlag);
+                    setResult(100, intent);
+                    finish();
+                }
+            });
+        }
+
         //-------以下是手写批注的按钮-------
 
         //region 关闭手写页面
-        btnClose = getMenuButton(getResources().getDrawable(R.drawable.ic_exit),"退出手写");
+        btnClose = getMenuButton(getResources().getDrawable(R.drawable.ic_exit), "退出手写");
         //region 点击事件
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(pdfView.hasHandwriting()){
-                    final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this,AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                if (pdfView.hasHandwriting()) {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this, AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
                     builder.setMessage("有未保存的手写内容，是否退出");
                     builder.setTitle("退出手写模式");
-                    builder.setPositiveButton("确定",
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    pdfView.hideSignView();
-                                    addActionBtns();
-                                    Toast.makeText(SignPdfView.this,"已关闭手写批注模式",Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                    builder.setNegativeButton("取消",
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog,int which) {
-                                    dialog.dismiss();
-                                }
-                            });
+                    builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            pdfView.hideSignView();
+                            addActionBtns();
+                            Toast.makeText(SignPdfView.this, "已关闭手写批注模式", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
 
                     final Dialog dialog = builder.create();
                     dialog.setCancelable(false);
                     dialog.show();
-                }else{
+                } else {
                     pdfView.hideSignView();
                     addActionBtns();
                 }
@@ -294,27 +322,27 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 保存手写签批
-        btnSave = getMenuButton(getResources().getDrawable(R.drawable.ic_save),"保 存");
+        btnSave = getMenuButton(getResources().getDrawable(R.drawable.ic_save), "保 存");
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(pdfView.hasHandwriting()){
-                    sendMessage(MSG_SHOW_LOADING,"正在保存");
-                    new Thread(){
+                if (pdfView.hasHandwriting()) {
+                    sendMessage(MSG_SHOW_LOADING, "正在保存");
+                    new Thread() {
                         @Override
                         public void run() {
                             CommentData handwritingData = pdfView.getSignBitmap();
                             float wr = pdfView.getDisplayWRadio();
                             float hr = pdfView.getDisplayHRadio();
-                            if (handwritingData!=null&&handwritingData.getImageBitmap() != null) {
+                            if (handwritingData != null && handwritingData.getImageBitmap() != null) {
                                 float x = handwritingData.getSignX();
                                 float y = handwritingData.getSignY();
                                 //获取没有放大或缩小的图片数据
-                                Bitmap originBitmap = ImageTools.scaleBitmap(handwritingData.getImageBitmap(),1/pdfView.getZoom());
+                                Bitmap originBitmap = ImageTools.scaleBitmap(handwritingData.getImageBitmap(), 1 / pdfView.getZoom());
                                 float width = originBitmap.getWidth() / wr;
                                 float height = originBitmap.getHeight() / hr;
-                                handwritingData.setPx(x/wr);
-                                handwritingData.setPy(y/hr);
+                                handwritingData.setPx(x / wr);
+                                handwritingData.setPy(y / hr);
                                 handwritingData.setImageWidth(width);
                                 handwritingData.setImageHeight(height);
                                 handwritingData.setImageBitmap(originBitmap);
@@ -326,13 +354,13 @@ public class SignPdfView extends AppCompatActivity {
                                 handwritingData.setSignTime(new Date());
                                 //保存到远程服务器
                                 saveHandwritingData(handwritingData);
-                            }else{
-                                sendMessage(MSG_HIDE_LOADING,null);
+                            } else {
+                                sendMessage(MSG_HIDE_LOADING, null);
                             }
                         }
                     }.start();
-                }else{
-                    Toast.makeText(SignPdfView.this,"无手写内容",Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(SignPdfView.this, "无手写内容", Toast.LENGTH_LONG).show();
                 }
 
             }
@@ -340,11 +368,11 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 手写签批清空
-        btnClear = getMenuButton(getResources().getDrawable(R.drawable.ic_clear),"清 空");
+        btnClear = getMenuButton(getResources().getDrawable(R.drawable.ic_clear), "清 空");
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this, R.style.Theme_AppCompat_Light_Dialog_Alert_EinkSign);
+                final AlertDialog.Builder builder = new AlertDialog.Builder(SignPdfView.this);
                 builder.setMessage("是否清空");
                 builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
                     @Override
@@ -370,14 +398,14 @@ public class SignPdfView extends AppCompatActivity {
         penSettingFragment.setOnSaveListener(new PenSettingFragment.OnSaveListener() {
             @Override
             public void onSaveAction() {
-                float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH,PenSettingFragment.defaultWidth);
+                float penWidth = penSettingData.getFloat(PenSettingFragment.PEN_WIDTH, PenSettingFragment.defaultWidth);
                 int penColor = penSettingData.getInt(PenSettingFragment.PEN_COLOR, Color.BLACK);
-                int penType = penSettingData.getInt(PenSettingFragment.PEN_TYPE,PenSettingFragment.STROKE_TYPE_PEN);
-                penOnly = penSettingData.getBoolean(PenSettingFragment.PEN_ONLY,true);
-                pdfView.setPenSetting(penWidth,penColor,penOnly,penType);
+                int penType = penSettingData.getInt(PenSettingFragment.PEN_TYPE, PenSettingFragment.STROKE_TYPE_PEN);
+                penOnly = penSettingData.getBoolean(PenSettingFragment.PEN_ONLY, true);
+                pdfView.setPenSetting(penWidth, penColor, penOnly, penType);
             }
         });
-        btnPen = getMenuButton(getResources().getDrawable(R.drawable.ic_setting),"设 置");
+        btnPen = getMenuButton(getResources().getDrawable(R.drawable.ic_setting), "设 置");
         btnPen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -387,21 +415,21 @@ public class SignPdfView extends AppCompatActivity {
         //endregion
 
         //region 设置橡皮擦
-        btnErase = getMenuButton(getResources().getDrawable(R.drawable.ic_erase),"橡皮檫");
+        btnErase = getMenuButton(getResources().getDrawable(R.drawable.ic_erase), "橡皮檫");
         btnErase.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 eraseFlag = !eraseFlag;
-                if(eraseFlag) {
-                    Toast.makeText(SignPdfView.this,"已进入橡皮擦模式",Toast.LENGTH_LONG).show();
-                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null,getResources().getDrawable(R.drawable.ic_close),null,null);
+                if (eraseFlag) {
+                    Toast.makeText(SignPdfView.this, "已进入橡皮擦模式", Toast.LENGTH_LONG).show();
+                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_close), null, null);
                     btnErase.setText("退出橡皮擦模式");
                     actionsMenu.removeAllViews();
                     actionsMenu.addView(btnErase);
-                }else{
-                    Toast.makeText(SignPdfView.this,"已退出橡皮擦模式",Toast.LENGTH_LONG).show();
-                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null,getResources().getDrawable(R.drawable.ic_erase),null,null);
+                } else {
+                    Toast.makeText(SignPdfView.this, "已退出橡皮擦模式", Toast.LENGTH_LONG).show();
+                    btnErase.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_erase), null, null);
                     btnErase.setText("橡皮檫");
                     addHandWriteBtns();
                 }
@@ -410,69 +438,7 @@ public class SignPdfView extends AppCompatActivity {
         });
         //endregion
 
-        if(meetingWsListener!=null&&isHost){
-            meetingMemItem = getMenuButton(getResources().getDrawable(R.drawable.ic_people),"与会人员");
-            meetingMemItem.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    httpUtil.get(serverUrl + URL_FIND_MEETING_MEMBERS + "?recordId=" + meetingRecordId, new Callback() {
-                        @Override
-                        public void onFailure(Call call, IOException e) {
-                            sendMessage(MSG_RESPONSE_MSG,"操作失败");
-                        }
-
-                        @Override
-                        public void onResponse(Call call, Response response) throws IOException {
-                            if(response.isSuccessful()&&response.body()!=null) {
-                                String data = response.body().string();
-                                AppResponse resData = JSON.parseObject(data, AppResponse.class);
-                                if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())&&resData.getData()!=null){
-                                    final List<MeetingMemberData> memberDataList = JSON.parseArray(resData.getData().toString(),MeetingMemberData.class);
-                                    SignPdfView.this.runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            MeetingMemberFragment fragment = new MeetingMemberFragment();
-                                            MeetingMemberAdaptor adaptor = new MeetingMemberAdaptor(getApplicationContext(),memberDataList);
-                                            fragment.showFragmentDlg(getSupportFragmentManager(),"meetingMemberList",adaptor);
-
-
-                                        }
-                                    });
-                                }else{
-                                    sendMessage(MSG_RESPONSE_MSG,"操作失败");
-                                }
-
-                            }else {
-                                sendMessage(MSG_RESPONSE_MSG,"操作失败");
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        jumpToItem = getMenuButton(getResources().getDrawable(R.drawable.ic_jump_to),"跳转到");
-        jumpToItem.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                jumpToFragment.showFragmentDlg(getSupportFragmentManager(),"PdfJumpToFragment",pdfView.getCurrentPage()+1,pdfView.getPageCount());
-            }
-        });
-
-        //公文提交按钮
-        if(isDocMode){
-            btnSubmit = getMenuButton(getResources().getDrawable(R.drawable.ic_submit),"提 交");
-            btnSubmit.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.putExtra("docSubmitFlag",true);
-                    setResult(100,intent);
-                    finish();
-                }
-            });
-        }
-
+        //region 文字批注
         textInputFragment = new TextInputFragment();
         textInputFragment.setOnSaveListener(new TextInputFragment.OnSaveListener() {
             @Override
@@ -481,14 +447,58 @@ public class SignPdfView extends AppCompatActivity {
                 pdfView.addTextData(textData);
             }
         });
-        textInputItem = getMenuButton(getResources().getDrawable(R.drawable.ic_text),"文 字");
+        textInputItem = getMenuButton(getResources().getDrawable(R.drawable.ic_text), "文 字");
         textInputItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 isTextInput = true;
-                Toast.makeText(SignPdfView.this,"请点击需要插入文字的位置",Toast.LENGTH_LONG).show();
+                Toast.makeText(SignPdfView.this, "请点击需要插入文字的位置", Toast.LENGTH_LONG).show();
             }
         });
+        //endregion
+
+        //region 会议与会人员
+        if (meetingWsListener != null && isHost) {
+            meetingMemItem = getMenuButton(getResources().getDrawable(R.drawable.ic_people), "与会人员");
+            meetingMemItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    httpUtil.get(serverUrl + URL_FIND_MEETING_MEMBERS + "?recordId=" + meetingRecordId, new Callback() {
+                        @Override
+                        public void onFailure(Call call, IOException e) {
+                            sendMessage(MSG_RESPONSE_MSG, "操作失败");
+                        }
+
+                        @Override
+                        public void onResponse(Call call, Response response) throws IOException {
+                            if (response.isSuccessful() && response.body() != null) {
+                                String data = response.body().string();
+                                AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                                if (AppResponse.RES_SUCCESS.equals(resData.getSuccess()) && resData.getData() != null) {
+                                    final List<MeetingMemberData> memberDataList = JSON.parseArray(resData.getData().toString(), MeetingMemberData.class);
+                                    SignPdfView.this.runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            MeetingMemberFragment fragment = new MeetingMemberFragment();
+                                            MeetingMemberAdaptor adaptor = new MeetingMemberAdaptor(getApplicationContext(), memberDataList);
+                                            fragment.showFragmentDlg(getSupportFragmentManager(), "meetingMemberList", adaptor);
+
+
+                                        }
+                                    });
+                                } else {
+                                    sendMessage(MSG_RESPONSE_MSG, "操作失败");
+                                }
+
+                            } else {
+                                sendMessage(MSG_RESPONSE_MSG, "操作失败");
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        //endregion
     }
 
     /**
@@ -557,6 +567,12 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(KEY_IS_DOC_MODE)) {
             isDocMode = intent.getBooleanExtra(KEY_IS_DOC_MODE,false);
         }
+        if (intent.hasExtra(KEY_IS_READ_MODE)) {
+            readMode = intent.getBooleanExtra(KEY_IS_READ_MODE,false);
+        }
+        if (intent.hasExtra(KEY_IS_HIDE_ANNOT)) {
+            hideAnnot = intent.getBooleanExtra(KEY_IS_HIDE_ANNOT,false);
+        }
 
         //公文相关
         if (intent.hasExtra(KEY_FLOW_INST_ID)) {
@@ -565,6 +581,8 @@ public class SignPdfView extends AppCompatActivity {
         if (intent.hasExtra(KEY_NODE_INST_ID)) {
             nodeInstId = intent.getStringExtra(KEY_NODE_INST_ID);
         }
+
+        modifyFlag=false;
     }
 
     public void openPdfFile(){
@@ -663,6 +681,7 @@ public class SignPdfView extends AppCompatActivity {
                         String data = response.body().string();
                         AppResponse resData = JSON.parseObject(data, AppResponse.class);
                         if(resData.getData()!=null){
+                            modifyFlag=true;
                             //添加到图层
                             handwritingData.setId(resData.getData().toString());
                             pdfView.addHandwritingData(handwritingData);
@@ -721,6 +740,7 @@ public class SignPdfView extends AppCompatActivity {
                         String data = response.body().string();
                         AppResponse resData = JSON.parseObject(data, AppResponse.class);
                         if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())){
+                            modifyFlag=true;
                             sendMessage(MSG_DEL_COMMENT_LIST,id);
                         }else{
                             sendMessage(MSG_RESPONSE_MSG,"操作失败");
@@ -742,7 +762,7 @@ public class SignPdfView extends AppCompatActivity {
         httpUtil.get(serverUrl + URL_GET_MD5 + "?fileId=" + fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
+                sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
             }
 
             @Override
@@ -758,7 +778,8 @@ public class SignPdfView extends AppCompatActivity {
                         Map dataMap = JSON.parseObject(resData.getData().toString());
                         if(!dataMap.isEmpty()){
                             File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
-                            if(pdfFile.exists()){
+                            boolean isSame = OkHttpUtil.getFileMd5Code(pdfFile).equals(dataMap.get("mdfCode"));
+                            if(pdfFile.exists()&&isSame){
                                 filePath = pdfFile.getAbsolutePath();
                                 findHandwritingData();
                             }else{
@@ -766,12 +787,12 @@ public class SignPdfView extends AppCompatActivity {
                                 downloadFile(pdfFile);
                             }
                         }else{
-                            sendMessage(MSG_RESPONSE_MSG,"文件打开失败");
+                            sendMessage(MSG_DOWNLOAD_ERROR,"文件打开失败");
                         }
 
                     }
                 }else{
-                    sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
+                    sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
                 }
             }
         });
@@ -786,7 +807,7 @@ public class SignPdfView extends AppCompatActivity {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                sendMessage(MSG_RESPONSE_MSG,"文件下载失败，请尝试重新打开");
+                sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
             }
 
             @Override
@@ -796,7 +817,7 @@ public class SignPdfView extends AppCompatActivity {
                 FileOutputStream fos = null;
                 try {
                     if (call.isCanceled()) {
-                        sendMessage(MSG_RESPONSE_MSG,"已取消文件下载");
+                        sendMessage(MSG_DOWNLOAD_ERROR,"已取消文件下载");
                         return;
                     }
                     if (response.isSuccessful()) {
@@ -820,11 +841,11 @@ public class SignPdfView extends AppCompatActivity {
                         findHandwritingData();
                     } else {
                         sendMessage(MSG_HIDE_LOADING,null);
-                        sendMessage(MSG_RESPONSE_MSG,"文件下载失败");
+                        sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败");
                     }
                 } catch (Exception e) {
                     sendMessage(MSG_HIDE_LOADING,null);
-                    sendMessage(MSG_RESPONSE_MSG,"文件下载异常");
+                    sendMessage(MSG_DOWNLOAD_ERROR,"文件下载异常");
                 } finally {
                     if (null != responseBody) {
                         responseBody.close();
@@ -844,7 +865,11 @@ public class SignPdfView extends AppCompatActivity {
         if (meetingRecordId != null && !"".equals(meetingRecordId.trim())) {
             findMeetingHandwriting();
         } else {
-            findPdfHandwriting();
+            if(hideAnnot) {
+                sendMessage(MSG_FIND_COMMENT_LIST,null);
+            }else{
+                findPdfHandwriting();
+            }
         }
     }
 
@@ -920,7 +945,7 @@ public class SignPdfView extends AppCompatActivity {
 
         if(meetingRecordId!=null&&!isHost){
             //会议模式(与会人员)
-            actionsMenu.addView(closeViewItem);
+
         }else if(meetingRecordId!=null){
             //会议模式（主持人）
             actionsMenu.addView(handWriteItem);
@@ -928,15 +953,20 @@ public class SignPdfView extends AppCompatActivity {
                 actionsMenu.addView(meetingMemItem);
             }
             actionsMenu.addView(jumpToItem);
-            actionsMenu.addView(closeViewItem);
         }else{
             if(btnSubmit!=null) {
                 actionsMenu.addView(btnSubmit);
             }
-            actionsMenu.addView(handWriteItem);
+            if(!readMode) {
+                actionsMenu.addView(handWriteItem);
+            }
             actionsMenu.addView(jumpToItem);
-            actionsMenu.addView(closeViewItem);
         }
+        addCommonBtns();
+    }
+
+    private void addCommonBtns(){
+        actionsMenu.addView(closeViewItem);
     }
 
     /**
@@ -1133,6 +1163,12 @@ public class SignPdfView extends AppCompatActivity {
                         signPdfView.httpResponseMsg(dataObj.toString());
                     }
                     break;
+                case MSG_DOWNLOAD_ERROR:
+                    if(dataObj!=null) {
+                        signPdfView.httpResponseMsg(dataObj.toString());
+                    }
+                    signPdfView.addCommonBtns();
+                    break;
                 default:
             }
         }
@@ -1150,5 +1186,26 @@ public class SignPdfView extends AppCompatActivity {
         }
 
         setResult(1001);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (KeyEvent.KEYCODE_BACK == keyCode) {
+            if ((System.currentTimeMillis() - exitTime) > 2000) {
+                Toast.makeText(getApplicationContext(), "再按一次退出程序", Toast.LENGTH_SHORT).show();
+                exitTime = System.currentTimeMillis();
+            } else {
+                closePdfView();
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    private void closePdfView(){
+        Intent intent = new Intent();
+        intent.putExtra("modifyFlag", modifyFlag);
+        setResult(100, intent);
+        finish();
     }
 }
