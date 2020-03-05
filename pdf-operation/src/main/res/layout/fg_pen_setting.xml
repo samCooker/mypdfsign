@@ -45,8 +45,8 @@
             android:layout_height="wrap_content"
             android:padding="10dp">
         <RadioGroup android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/rg_pen_type">
-            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="普通笔  " android:id="@+id/rg_pen_normal" android:layout_marginRight="30dp" android:drawableRight="@drawable/pen_ballpen"/>
-            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="笔  刷  " android:id="@+id/rg_pen_brush" android:drawableRight="@drawable/pen_waterpen"/>
+            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="普通笔" android:id="@+id/rg_pen_normal" android:layout_marginRight="30dp"/>
+            <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="笔  刷" android:id="@+id/rg_pen_brush"/>
         </RadioGroup>
     </LinearLayout>
 
