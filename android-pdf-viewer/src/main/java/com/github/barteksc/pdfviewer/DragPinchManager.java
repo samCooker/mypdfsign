@@ -17,7 +17,6 @@ package com.github.barteksc.pdfviewer;
 
 import android.graphics.PointF;
 import android.graphics.RectF;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -64,12 +63,15 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         enabled = false;
     }
 
+    void disableLongpress(){
+        gestureDetector.setIsLongpressEnabled(false);
+    }
+
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
         boolean onTapHandled = pdfView.callbacks.callOnTap(e);
-        //去掉链接跳转
-        //boolean linkTapped = checkLinkTapped(e.getX(), e.getY());
-        if (!onTapHandled) {
+        boolean linkTapped = checkLinkTapped(e.getX(), e.getY());
+        if (!onTapHandled && !linkTapped) {
             ScrollHandle ps = pdfView.getScrollHandle();
             if (ps != null && !pdfView.documentFitsView()) {
                 if (!ps.shown()) {
@@ -84,12 +86,10 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     private boolean checkLinkTapped(float x, float y) {
-
-        if (pdfView.isNotChangePage()){
+        PdfFile pdfFile = pdfView.pdfFile;
+        if (pdfFile == null) {
             return false;
         }
-
-        PdfFile pdfFile = pdfView.pdfFile;
         float mappedX = -pdfView.getCurrentXOffset() + x;
         float mappedY = -pdfView.getCurrentYOffset() + y;
         int page = pdfFile.getPageAtOffset(pdfView.isSwipeVertical() ? mappedY : mappedX, pdfView.getZoom());
@@ -170,7 +170,7 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     @Override
-    public boolean onSingleTapUp(MotionEvent event) {
+    public boolean onSingleTapUp(MotionEvent e) {
         return false;
     }
 
@@ -192,15 +192,11 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         if (!animationManager.isFlinging()) {
             pdfView.performPageSnap();
         }
-        pdfView.callbacks.callOnScrollEnd(event);
     }
 
     @Override
     public void onLongPress(MotionEvent e) {
         pdfView.callbacks.callOnLongPress(e);
-
-        Log.d("onLongPress",e.getX()+"::"+e.getY());
-
     }
 
     @Override
@@ -208,7 +204,7 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         if (!pdfView.isSwipeEnabled()) {
             return false;
         }
-        if (pdfView.doPageFling()) {
+        if (pdfView.isPageFlingEnabled()) {
             if (pdfView.pageFillsScreen()) {
                 onBoundedFling(velocityX, velocityY);
             } else {
@@ -262,15 +258,14 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
-        if(pdfView.isPenOnly()&&pdfView.isSignpagVisible()){
-            return false;
-        }
         float dr = detector.getScaleFactor();
         float wantedZoom = pdfView.getZoom() * dr;
-        if (wantedZoom < MINIMUM_ZOOM) {
-            dr = MINIMUM_ZOOM / pdfView.getZoom();
-        } else if (wantedZoom > MAXIMUM_ZOOM) {
-            dr = MAXIMUM_ZOOM / pdfView.getZoom();
+        float minZoom = Math.min(MINIMUM_ZOOM, pdfView.getMinZoom());
+        float maxZoom = Math.min(MAXIMUM_ZOOM, pdfView.getMaxZoom());
+        if (wantedZoom < minZoom) {
+            dr = minZoom / pdfView.getZoom();
+        } else if (wantedZoom > maxZoom) {
+            dr = maxZoom / pdfView.getZoom();
         }
         pdfView.zoomCenteredRelativeTo(dr, new PointF(detector.getFocusX(), detector.getFocusY()));
         return true;
@@ -291,12 +286,12 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        Log.d("touch","----pdfview onTouch "+event.getAction());
-        Log.d("touch","----pdfview x "+event.getX() + ":" + event.getY());
         if (!enabled) {
             return false;
         }
-        boolean retVal = gestureDetector.onTouchEvent(event) || scaleGestureDetector.onTouchEvent(event);
+
+        boolean retVal = scaleGestureDetector.onTouchEvent(event);
+        retVal = gestureDetector.onTouchEvent(event) || retVal;
 
         if (event.getAction() == MotionEvent.ACTION_UP) {
             if (scrolling) {
@@ -320,4 +315,7 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
         return pdfView.isSwipeVertical() ? absY > absX : absX > absY;
     }
 
+    public boolean isScaling(){
+        return scaling;
+    }
 }

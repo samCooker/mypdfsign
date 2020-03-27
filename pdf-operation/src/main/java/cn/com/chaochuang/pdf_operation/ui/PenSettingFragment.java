@@ -53,11 +53,6 @@ public class PenSettingFragment extends DialogFragment {
     private SeekBar penTypeBar;
     private TextView penWidthTv;
     private PenWidthView penWidthView;
-    private Switch penOnlySwitch;
-
-    private RadioGroup penTypeGroup;
-    private RadioButton normalPenBtn;
-    private RadioButton brushPenBtn;
 
     private int penMaxWidth = 80;
     private int penMinWidth = 2;
@@ -149,7 +144,6 @@ public class PenSettingFragment extends DialogFragment {
         if(penSettingData!=null) {
             penWidth = penSettingData.getFloat(PEN_WIDTH, defaultWidth);
             penColor = penSettingData.getInt(PEN_COLOR, Color.BLACK);
-            penOnlyFlag = penSettingData.getBoolean(PEN_ONLY,true);
             penType = penSettingData.getInt(PEN_TYPE,STROKE_TYPE_PEN);
         }else{
             penWidth = defaultWidth;
@@ -157,17 +151,19 @@ public class PenSettingFragment extends DialogFragment {
             penType = STROKE_TYPE_PEN;
         }
 
+        penOnlyFlag = true;
+
         penWidthView = settingContent.findViewById(R.id.tv_width_preview);
         penWidthView.setPenConfig(penWidth,penColor);
 
-        penOnlySwitch = settingContent.findViewById(R.id.sw_pen_only);
-        penOnlySwitch.setChecked(penOnlyFlag);
-        penOnlySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                penOnlyFlag = isChecked;
-            }
-        });
+//        penOnlySwitch = settingContent.findViewById(R.id.sw_pen_only);
+//        penOnlySwitch.setChecked(penOnlyFlag);
+//        penOnlySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                penOnlyFlag = isChecked;
+//            }
+//        });
 
         penColorGv = settingContent.findViewById(R.id.gv_pen_color);
         penColorAdaptor = new PenColorAdaptor(context);
@@ -208,37 +204,7 @@ public class PenSettingFragment extends DialogFragment {
             }
         });
 
-        int min;
-
-        penTypeGroup = settingContent.findViewById(R.id.rg_pen_type);
-        normalPenBtn = settingContent.findViewById(R.id.rg_pen_normal);
-        brushPenBtn = settingContent.findViewById(R.id.rg_pen_brush);
-        if(STROKE_TYPE_BRUSH == penType){
-            brushPenBtn.setChecked(true);
-            min = brushMinWidth;
-        }else{
-            normalPenBtn.setChecked(true);
-            min = penMinWidth;
-        }
-        penTypeGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                int _penMinWidth = penMinWidth;
-                if(checkedId == R.id.rg_pen_normal){
-                    normalPenBtn.setChecked(true);
-                    _penMinWidth = penMinWidth;
-                    penType = STROKE_TYPE_PEN;
-                }else if(checkedId == R.id.rg_pen_brush){
-                    brushPenBtn.setChecked(true);
-                    _penMinWidth = brushMinWidth;
-                    penType = STROKE_TYPE_BRUSH;
-                }
-
-                setSeekBarWidth(_penMinWidth);
-            }
-        });
-
-        setSeekBarWidth(min);
+        setSeekBarWidth(penMinWidth);
     }
 
     private void setSeekBarWidth(int width) {

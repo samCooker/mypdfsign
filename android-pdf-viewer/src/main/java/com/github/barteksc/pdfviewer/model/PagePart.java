@@ -28,8 +28,6 @@ public class PagePart {
 
     private boolean thumbnail;
 
-    private boolean signImage;
-
     private int cacheOrder;
 
     public PagePart(int page, Bitmap renderedBitmap, RectF pageRelativeBounds, boolean thumbnail, int cacheOrder) {
@@ -63,14 +61,6 @@ public class PagePart {
 
     public void setCacheOrder(int cacheOrder) {
         this.cacheOrder = cacheOrder;
-    }
-
-    public boolean isSignImage() {
-        return signImage;
-    }
-
-    public void setSignImage(boolean signImage) {
-        this.signImage = signImage;
     }
 
     @Override

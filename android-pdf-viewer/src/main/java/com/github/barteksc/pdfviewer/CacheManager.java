@@ -17,10 +17,14 @@ package com.github.barteksc.pdfviewer;
 
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
-import cn.com.chaochuang.writingpen.model.CommentData;
+
 import com.github.barteksc.pdfviewer.model.PagePart;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
 
 import static com.github.barteksc.pdfviewer.util.Constants.Cache.CACHE_SIZE;
 import static com.github.barteksc.pdfviewer.util.Constants.Cache.THUMBNAILS_CACHE_SIZE;
@@ -33,10 +37,6 @@ class CacheManager {
 
     private final List<PagePart> thumbnails;
 
-    private final List<CommentData> handwritingList;
-
-    private final List<CommentData> textDataList;
-
     private final Object passiveActiveLock = new Object();
 
     private final PagePartComparator orderComparator = new PagePartComparator();
@@ -45,8 +45,6 @@ class CacheManager {
         activeCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         passiveCache = new PriorityQueue<>(CACHE_SIZE, orderComparator);
         thumbnails = new ArrayList<>();
-        handwritingList = new ArrayList<>();
-        textDataList = new ArrayList<>();
     }
 
     public void cachePart(PagePart part) {
@@ -92,87 +90,6 @@ class CacheManager {
             addWithoutDuplicates(thumbnails, part);
         }
 
-    }
-
-    public void cacheHandwriteImage(CommentData part) {
-        synchronized (handwritingList) {
-            for (CommentData data: handwritingList){
-                if(data.equals(part)){
-                    return;
-                }
-            }
-            handwritingList.add(part);
-        }
-    }
-
-    public void cacheTextData(CommentData part) {
-        synchronized (textDataList) {
-            for (CommentData data: textDataList){
-                if(data.equals(part)){
-                    return;
-                }
-            }
-            textDataList.add(part);
-        }
-    }
-
-    public void removeHandwritingImage(String id){
-        if(id==null){
-            return;
-        }
-        synchronized (handwritingList) {
-            Iterator<CommentData> iterator = handwritingList.iterator();
-            while (iterator.hasNext()){
-                CommentData handwritingData = iterator.next();
-                if(id.equals(handwritingData.getId())){
-                    iterator.remove();
-                }
-            }
-        }
-    }
-
-    public void removeTextData(String id){
-        if(id==null){
-            return;
-        }
-        synchronized (textDataList) {
-            Iterator<CommentData> iterator = textDataList.iterator();
-            while (iterator.hasNext()){
-                CommentData handwritingData = iterator.next();
-                if(id.equals(handwritingData.getId())){
-                    iterator.remove();
-                }
-            }
-        }
-    }
-
-    public void removeHandwritingImage(List<String> idList){
-        if(idList==null){
-            return;
-        }
-        synchronized (handwritingList) {
-            Iterator<CommentData> iterator = handwritingList.iterator();
-            while (iterator.hasNext()){
-                CommentData handwritingData = iterator.next();
-                for (String id:idList) {
-                    if (id.equals(handwritingData.getId())) {
-                        iterator.remove();
-                    }
-                }
-            }
-        }
-    }
-
-    public List<CommentData> getHandwritePart() {
-        synchronized (handwritingList) {
-            return handwritingList;
-        }
-    }
-
-    public List<CommentData> getTextDataPart() {
-        synchronized (textDataList) {
-            return textDataList;
-        }
     }
 
     public boolean upPartIfContained(int page, RectF pageRelativeBounds, int toOrder) {

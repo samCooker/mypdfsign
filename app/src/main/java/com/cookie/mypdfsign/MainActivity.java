@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
         intent.putExtra(Constants.KEY_IS_HOST, true);
         intent.putExtra(Constants.KEY_PEN_ONLY, false);
         intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4MjIxMDkwMn0.NGn4VMwOinRyTwZB-1t4OrqdthZbAJuTbPf5LRKZrwo");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NTM1NTA4N30.HHx4cIZsViz3nyyEhoMt2WpTI-oxjejJDTvI7DLvkLU");
         startActivityForResult(intent,1001);
 
     }

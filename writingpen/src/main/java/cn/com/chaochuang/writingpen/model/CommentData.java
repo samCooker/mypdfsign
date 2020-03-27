@@ -14,7 +14,6 @@ import java.util.Date;
 public class CommentData {
 
     public static final String TYPE_HANDWRITING = "0";
-    public static final String TYPE_TEXT = "1";
 
     private String id;
     private int pageNo;

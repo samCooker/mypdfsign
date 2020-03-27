@@ -70,13 +70,6 @@ public class Callbacks {
     private OnLongPressListener onLongPressListener;
 
     /**
-     *
-     */
-    private OnHandwritingDeleteListener onHandwritingDeleteListener;
-
-    private OnScrollEndListener onScrollEndListener;
-
-    /**
      * Call back object to call when clicking link
      */
     private LinkHandler linkHandler;
@@ -182,26 +175,6 @@ public class Callbacks {
     public void callLinkHandler(LinkTapEvent event) {
         if (linkHandler != null) {
             linkHandler.handleLinkEvent(event);
-        }
-    }
-
-    public void setOnHandwritingDeleteListener(OnHandwritingDeleteListener onHandwritingDeleteListener){
-        this.onHandwritingDeleteListener = onHandwritingDeleteListener;
-    }
-
-    public void callOnHandwritingDelete(String id){
-        if(onHandwritingDeleteListener != null){
-            onHandwritingDeleteListener.onDelete(id);
-        }
-    }
-
-    public void setOnScrollEndListener(OnScrollEndListener onScrollEndListener) {
-        this.onScrollEndListener = onScrollEndListener;
-    }
-
-    public void callOnScrollEnd(MotionEvent event){
-        if(onScrollEndListener != null){
-            onScrollEndListener.onScrollEnd(event);
         }
     }
 }

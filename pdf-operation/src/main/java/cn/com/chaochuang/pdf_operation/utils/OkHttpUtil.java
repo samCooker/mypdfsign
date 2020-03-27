@@ -1,5 +1,6 @@
 package cn.com.chaochuang.pdf_operation.utils;
 
+import android.graphics.Bitmap;
 import android.util.Log;
 import cn.com.chaochuang.writingpen.model.CommentData;
 import com.chaochuang.oa.dataaec.util.AesTool;
@@ -113,6 +114,16 @@ public class OkHttpUtil {
     }
 
     public void setHandwritingList(List<CommentData> commentDataList){
+        if(commentDataList!=null){
+            for (CommentData commentData:commentDataList){
+                if(CommentData.TYPE_HANDWRITING.equals(commentData.getSignType())){
+                    if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
+                        Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
+                        commentData.setImageBitmap(bitmap);
+                    }
+                }
+            }
+        }
         this.handwritingList = commentDataList;
     }
 
@@ -138,15 +149,24 @@ public class OkHttpUtil {
      */
     public static String getFileMd5Code(File file) {
         MessageDigest md = null;
+        FileInputStream in = null;
         try {
             md = MessageDigest.getInstance("MD5");
-            FileInputStream in = new FileInputStream(file);
+            in = new FileInputStream(file);
             FileChannel ch = in.getChannel();
             MappedByteBuffer byteBuffer = ch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
             md.update(byteBuffer);
             return bufferToHex(md.digest());
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
+        } finally {
+            if(in!=null){
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return "";
     }

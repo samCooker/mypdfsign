@@ -8,6 +8,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+
+import cn.com.chaochuang.writingpen.model.CommentData;
 import cn.com.chaochuang.writingpen.model.SignBitmapData;
 import cn.com.chaochuang.writingpen.utils.BasePenExtend;
 import cn.com.chaochuang.writingpen.utils.BrushPen;
@@ -32,7 +34,8 @@ public class DrawPenView extends View {
     private float penWidth;
     private int penColor;
     private int penType;
-    private boolean penOnly;
+    private boolean penOnly=true;
+    private boolean writingMode = false;
 
     public DrawPenView(Context context) {
         super(context);
@@ -56,13 +59,16 @@ public class DrawPenView extends View {
         mBitmap = Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, Bitmap.Config.ARGB_8888);
         mStokeBrushPen = new SteelPen(context);
 
-        //initPaint();
+        initPaint();
         initCanvas();
     }
 
 
     private void initPaint() {
-        mPaint = new Paint();
+
+        if(mPaint==null) {
+            mPaint = new Paint();
+        }
 
         mPaint.setColor(this.penColor);
         mPaint.setStrokeWidth(this.penWidth);
@@ -158,6 +164,13 @@ public class DrawPenView extends View {
             return true;
         }
 
+        Log.d(TAG,"touch event");
+
+
+        //不是手写模式
+        if(!writingMode){
+            return false;
+        }
 
         //新增 判断是否为手写笔
         int type = event.getToolType(event.getActionIndex());
@@ -235,7 +248,17 @@ public class DrawPenView extends View {
 
         void stopTime();
     }
+
+    public boolean isWritingMode() {
+        return writingMode;
+    }
+
+    public void setWritingMode(boolean writingMode) {
+        this.writingMode = writingMode;
+    }
+
     private int mBackColor = Color.TRANSPARENT;
+
     /**
      * 逐行扫描 清楚边界空白。功能是生成一张bitmap位于正中间，不是位于顶部，此关键的是我们画布需要
      * 成透明色才能生效
