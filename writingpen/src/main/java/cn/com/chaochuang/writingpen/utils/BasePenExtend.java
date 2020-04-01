@@ -40,8 +40,12 @@ public abstract class BasePenExtend extends BasePen {
     protected boolean isEraser = false;
     public float eraseWidth = 20f;
 
+    //最大最小坐标
+    public float minX,minY,maxX,maxY;
+
     public BasePenExtend(Context context){
         mContext = context;
+        clearSaveCor();
     }
 
     public void setPaint(Paint paint) {
@@ -49,10 +53,17 @@ public abstract class BasePenExtend extends BasePen {
 
         erasePaint = new Paint();
         erasePaint.setAlpha(0);
-        erasePaint.setStrokeWidth(eraseWidth*2);
+        erasePaint.setStrokeWidth(eraseWidth);
         erasePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 
         mBaseWidth = paint.getStrokeWidth();
+    }
+
+    public void setEraseWidth(float width){
+        eraseWidth=width;
+        if(erasePaint!=null) {
+            erasePaint.setStrokeWidth(eraseWidth);
+        }
     }
 
     @Override
@@ -99,6 +110,7 @@ public abstract class BasePenExtend extends BasePen {
 
         // event会被下一次事件重用，这里必须生成新的，否则会有问题
         MotionEvent event2 = MotionEvent.obtain(event);
+        saveMaxMinCor(event2.getX(),event2.getY());
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 onDown(createMotionElement(event2),canvas);
@@ -113,6 +125,28 @@ public abstract class BasePenExtend extends BasePen {
                 break;
         }
         return super.onTouchEvent(event,canvas);
+    }
+
+    private void saveMaxMinCor(float x, float y) {
+        if(minX==-1){
+            minX=x;
+            maxX=x;
+            minY=y;
+            maxY=y;
+        }
+        if(minX>x){
+            minX=x;
+        }
+        if(maxX<x){
+            maxX=x;
+        }
+
+        if(minY>y){
+            minY=y;
+        }
+        if(maxY<y){
+            maxY=y;
+        }
     }
 
     /**
@@ -359,5 +393,12 @@ public abstract class BasePenExtend extends BasePen {
 
     public void setEraser(boolean eraser) {
         isEraser = eraser;
+    }
+
+    public void clearSaveCor() {
+        minX=-1;
+        minY=-1;
+        maxX=-1;
+        maxY=-1;
     }
 }

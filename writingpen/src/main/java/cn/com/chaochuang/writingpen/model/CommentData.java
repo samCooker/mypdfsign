@@ -29,6 +29,8 @@ public class CommentData {
     private float pdfFileHeight;
     private float pdfFileWidth;
 
+    private float zoom;
+
     private String fileId;
     private String signerId;
     private String signerName;
@@ -229,5 +231,13 @@ public class CommentData {
 
     public void setNodeInstId(String nodeInstId) {
         this.nodeInstId = nodeInstId;
+    }
+
+    public float getZoom() {
+        return zoom;
+    }
+
+    public void setZoom(float zoom) {
+        this.zoom = zoom;
     }
 }

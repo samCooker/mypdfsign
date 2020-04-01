@@ -21,9 +21,10 @@ public class MainActivity extends Activity {
         intent.putExtra(Constants.KEY_WEB_SOCKET_URL, "ws://192.168.31.60:8089/pdf_handwriting/meeting/ws/");
 //        intent.putExtra(Constants.KEY_MEETING_REOCRD_ID, "1");
         intent.putExtra(Constants.KEY_IS_HOST, true);
+        intent.putExtra(Constants.KEY_IS_DOC_MODE, true);
         intent.putExtra(Constants.KEY_PEN_ONLY, false);
         intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NTM1NTA4N30.HHx4cIZsViz3nyyEhoMt2WpTI-oxjejJDTvI7DLvkLU");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NTgwOTgwNH0.lrtt1yrWNpL_1kABoYAWvOy1ZYv6EGEnDp8KN6iVXDU");
         startActivityForResult(intent,1001);
 
     }

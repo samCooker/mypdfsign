@@ -16,6 +16,7 @@ import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -125,6 +126,30 @@ public class OkHttpUtil {
             }
         }
         this.handwritingList = commentDataList;
+    }
+
+    public void addHandwriting(CommentData commentData){
+        if(commentData!=null&&this.handwritingList!=null){
+            if(CommentData.TYPE_HANDWRITING.equals(commentData.getSignType())){
+                if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
+                    Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
+                    commentData.setImageBitmap(bitmap);
+                }
+            }
+            this.handwritingList.add(commentData);
+        }
+    }
+
+    public void removeHandwriting(String id){
+        if(this.handwritingList!=null){
+            Iterator<CommentData> iterator = this.handwritingList.iterator();
+            while (iterator.hasNext()){
+                CommentData commentData = iterator.next();
+                if(commentData.getId().equals(id)){
+                    iterator.remove();
+                }
+            }
+        }
     }
 
     public List<CommentData> getHandwritingList() {

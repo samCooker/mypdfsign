@@ -2,4 +2,13 @@
 <resources>
     <dimen name="pdf_toolbar_height">74dp</dimen>
     <dimen name="pdf_btn_padding">10dp</dimen>
+
+    <dimen name="pdf_actionsheet_width">200dp</dimen>
+    <dimen name="pdf_divider_height">1dp</dimen>
+    <dimen name="pdf_divider_margin_horizontal">2dp</dimen>
+    <dimen name="pdf_title_padding_vertical">6dp</dimen>
+    <dimen name="pdf_title_text_size">14sp</dimen>
+    <dimen name="pdf_action_text_size">12sp</dimen>
+    <dimen name="pdf_rounded_corner">8dp</dimen>
+    <dimen name="pdf_arrow_size">20dp</dimen>
 </resources>

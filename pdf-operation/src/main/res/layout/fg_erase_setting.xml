@@ -1,0 +1,40 @@
+<LinearLayout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/erase_setting"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="110dp"
+        android:layout_gravity="center_vertical"
+        android:padding="10dp"
+        android:background="@android:color/white" >
+
+        <cn.com.chaochuang.pdf_operation.ui.PenWidthView
+            android:id="@+id/tv_erase_width"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </LinearLayout>
+
+    <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:gravity="center" >
+
+        <TextView
+                android:id="@+id/eraser_pen_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black" />
+
+        <SeekBar
+                android:id="@+id/eraser_pen_sb"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"/>
+    </LinearLayout>
+
+</LinearLayout>

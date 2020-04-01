@@ -10,4 +10,12 @@
     <color name="pdf_tool_bg">#b4f8fa</color>
 
     <color name="textBlack">#444</color>
+
+    <color name="pdf_black">#000000</color>
+    <color name="pdf_blue">#2196F3</color>
+    <color name="pdf_red">#F44336</color>
+
+    <color name="pdf_comment_border">#2196F3</color>
+    <color name="pdf_light_gray">#05000000</color>
+    <color name="pdf_as_title_bg">#FFECB3</color>
 </resources>

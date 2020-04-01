@@ -34,6 +34,7 @@ import android.os.Build;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
 import com.github.barteksc.pdfviewer.exception.PageRenderingException;
@@ -95,8 +96,8 @@ public class PDFView extends RelativeLayout {
 
     private static final String TAG = PDFView.class.getSimpleName();
 
-    public static final float DEFAULT_MAX_SCALE = 3.0f;
-    public static final float DEFAULT_MID_SCALE = 1.75f;
+    public static final float DEFAULT_MAX_SCALE = 2.0f;
+    public static final float DEFAULT_MID_SCALE = 1.5f;
     public static final float DEFAULT_MIN_SCALE = 1.0f;
 
     private float minZoom = DEFAULT_MIN_SCALE;
@@ -1631,5 +1632,17 @@ public class PDFView extends RelativeLayout {
 
     public boolean isScaling(){
         return dragPinchManager.isScaling();
+    }
+
+    public LayoutParams getPdfLayoutParams(){
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+        SizeF size = pdfFile.getMaxPageSize();
+
+        layoutParams.width = (int) toCurrentScale(size.getWidth());
+        layoutParams.height = (int) toCurrentScale(size.getHeight());
+
+        layoutParams.addRule(CENTER_IN_PARENT);
+        return layoutParams;
     }
 }

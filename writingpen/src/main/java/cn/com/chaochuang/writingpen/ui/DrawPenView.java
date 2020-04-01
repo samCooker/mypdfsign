@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import cn.com.chaochuang.writingpen.model.CommentData;
 import cn.com.chaochuang.writingpen.model.SignBitmapData;
 import cn.com.chaochuang.writingpen.utils.BasePenExtend;
 import cn.com.chaochuang.writingpen.utils.BrushPen;
@@ -35,7 +34,6 @@ public class DrawPenView extends View {
     private int penColor;
     private int penType;
     private boolean penOnly=true;
-    private boolean writingMode = false;
 
     public DrawPenView(Context context) {
         super(context);
@@ -58,7 +56,7 @@ public class DrawPenView extends View {
         ((Activity) mContext).getWindowManager().getDefaultDisplay().getMetrics(dm);
         mBitmap = Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, Bitmap.Config.ARGB_8888);
         mStokeBrushPen = new SteelPen(context);
-
+        mStokeBrushPen.clearSaveCor();
         initPaint();
         initCanvas();
     }
@@ -94,6 +92,10 @@ public class DrawPenView extends View {
         initPaint();
     }
 
+    public void setEraseWidth(float width){
+        mStokeBrushPen.setEraseWidth(width);
+    }
+
     public boolean isPenOnly() {
         return penOnly;
     }
@@ -113,7 +115,7 @@ public class DrawPenView extends View {
                 mStokeBrushPen.draw(canvas);
                 break;
             case IPenConfig.STROKE_TYPE_ERASER:
-                reset();
+                clearView();
                 break;
             default:
                 Log.e(TAG, "onDraw" + Integer.toString(mCanvasCode));
@@ -167,11 +169,6 @@ public class DrawPenView extends View {
         Log.d(TAG,"touch event");
 
 
-        //不是手写模式
-        if(!writingMode){
-            return false;
-        }
-
         //新增 判断是否为手写笔
         int type = event.getToolType(event.getActionIndex());
         if(penOnly&&type != MotionEvent.TOOL_TYPE_STYLUS){
@@ -213,13 +210,13 @@ public class DrawPenView extends View {
     /**
      * 清除画布，记得清除点的集合
      */
-    public void reset() {
+    public void clearView() {
         mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
         mCanvas.drawPaint(mPaint);
         mPaint.setXfermode(null);
         mIsCanvasDraw = false;
         mStokeBrushPen.clear();
-
+        mStokeBrushPen.clearSaveCor();
         initPaint();
         //initCanvas();
         invalidate();
@@ -249,14 +246,6 @@ public class DrawPenView extends View {
         void stopTime();
     }
 
-    public boolean isWritingMode() {
-        return writingMode;
-    }
-
-    public void setWritingMode(boolean writingMode) {
-        this.writingMode = writingMode;
-    }
-
     private int mBackColor = Color.TRANSPARENT;
 
     /**
@@ -267,34 +256,26 @@ public class DrawPenView extends View {
      */
     public SignBitmapData getBitmapWithBlank(int blank) {
         if (mBitmap != null) {
-            SignBitmapData bitmapData = new SignBitmapData();
-            int minX,minY,maxX,maxY;
-            int HEIGHT = mBitmap.getHeight();//1794
-            int WIDTH = mBitmap.getWidth();//1080
-            int top = 0, left = 0, right = 0, bottom = 0;
-            int[] pixs = new int[WIDTH];
-            boolean isStop;
-            for (int y = 0; y < HEIGHT; y++) {
-                mBitmap.getPixels(pixs, 0, WIDTH, 0, y, WIDTH, 1);
-                isStop = false;
-                for (int pix : pixs) {
-                    if (pix != mBackColor) {
 
-                        top = y;
-                        isStop = true;
-                        break;
-                    }
-                }
-                if (isStop) {
-                    break;
-                }
-            }
-            for (int y = HEIGHT - 1; y >= 0; y--) {
-                mBitmap.getPixels(pixs, 0, WIDTH, 0, y, WIDTH, 1);
+            SignBitmapData bitmapData = new SignBitmapData();
+            int bitmapH = mBitmap.getHeight();
+            int bitmapW = mBitmap.getWidth();
+
+            int left = mStokeBrushPen.minX - blank > 0 ? (int) mStokeBrushPen.minX - blank : 0;
+            int top = mStokeBrushPen.minY - blank > 0 ? (int)mStokeBrushPen.minY - blank : 0;
+            int right = mStokeBrushPen.maxX + blank > bitmapW - 1 ? bitmapW - 1 : (int)mStokeBrushPen.maxX + blank;
+            int bottom = mStokeBrushPen.maxY + blank > bitmapH - 1 ? bitmapH - 1 : (int)mStokeBrushPen.maxY + blank;
+
+            Bitmap signBitmap = Bitmap.createBitmap(mBitmap, left,top,right-left,bottom-top);
+
+            //判断bitmap是否为空白
+            int[] pixs = new int[signBitmap.getWidth()];
+            boolean isStop=false;
+            for (int y = 0; y <signBitmap.getHeight(); y++) {
+                signBitmap.getPixels(pixs, 0, signBitmap.getWidth(), 0, y, signBitmap.getWidth(), 1);
                 isStop = false;
                 for (int pix : pixs) {
                     if (pix != mBackColor) {
-                        bottom = y;
                         isStop = true;
                         break;
                     }
@@ -303,49 +284,18 @@ public class DrawPenView extends View {
                     break;
                 }
             }
-            pixs = new int[HEIGHT];
-            for (int x = 0; x < WIDTH; x++) {
-                mBitmap.getPixels(pixs, 0, 1, x, 0, 1, HEIGHT);
-                isStop = false;
-                for (int pix : pixs) {
-                    if (pix != mBackColor) {
-                        left = x;
-                        isStop = true;
-                        break;
-                    }
-                }
-                if (isStop) {
-                    break;
-                }
+            //说明有笔迹内容
+            if(isStop){
+                bitmapData.setSignBitmap(signBitmap);
+                bitmapData.setMinX(left);
+                bitmapData.setMaxX(right);
+                bitmapData.setMinY(top);
+                bitmapData.setMaxY(bottom);
+
+                mStokeBrushPen.clearSaveCor();
+                return bitmapData;
             }
-            for (int x = WIDTH - 1; x > 0; x--) {
-                mBitmap.getPixels(pixs, 0, 1, x, 0, 1, HEIGHT);
-                isStop = false;
-                for (int pix : pixs) {
-                    if (pix != mBackColor) {
-                        right = x;
-                        isStop = true;
-                        break;
-                    }
-                }
-                if (isStop) {
-                    break;
-                }
-            }
-            if (blank < 0) {
-                blank = 0;
-            }
-            left = left - blank > 0 ? left - blank : 0;
-            top = top - blank > 0 ? top - blank : 0;
-            right = right + blank > WIDTH - 1 ? WIDTH - 1 : right + blank;
-            bottom = bottom + blank > HEIGHT - 1 ? HEIGHT - 1 : bottom + blank;
-            Bitmap signBitmap = Bitmap.createBitmap(mBitmap, left, top, right - left, bottom - top);
-            bitmapData.setSignBitmap(signBitmap);
-            bitmapData.setMinX(left);
-            bitmapData.setMaxX(right);
-            bitmapData.setMinY(top);
-            bitmapData.setMaxY(bottom);
-            return bitmapData;
+            return null;
         } else {
             return null;
         }

@@ -1,5 +1,8 @@
 package cn.com.chaochuang.pdf_operation.utils;
 
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
 /**
  * 2019-4-23
  *
@@ -7,6 +10,8 @@ package cn.com.chaochuang.pdf_operation.utils;
  */
 
 public class Constants {
+
+    public static final SimpleDateFormat DATA_FORMAT1 = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA);
 
     public static final String HEADER_TOKEN_NAME = "token";
 
@@ -54,6 +59,7 @@ public class Constants {
 
     public static final int MSG_FIND_COMMENT_LIST =1;
     public static final int MSG_SAVE_COMMENT_LIST =2;
+    public static final int MSG_SAVE_COMMENT_AND_SUBMIT =21;
     public static final int MSG_DEL_COMMENT_LIST =3;
     public static final int MSG_SHOW_CONFIRM_DLG =4;
     public static final int MSG_SHOW_LOADING =5;
