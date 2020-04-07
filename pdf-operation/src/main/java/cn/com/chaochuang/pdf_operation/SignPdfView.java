@@ -556,7 +556,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         autoFixTextView.setX(e.getX());
         autoFixTextView.setY(e.getY());
         autoFixTextView.setText("测试字体");
-        autoFixTextView.setPadding(10,10,10,10);
         pdfView.addView(autoFixTextView);
 
         return false;

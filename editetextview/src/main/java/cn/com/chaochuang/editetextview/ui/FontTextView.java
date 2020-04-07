@@ -1,12 +1,7 @@
 package cn.com.chaochuang.editetextview.ui;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.DashPathEffect;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.Typeface;
+import android.graphics.*;
 import android.support.v7.widget.AppCompatTextView;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -16,6 +11,7 @@ import android.widget.RelativeLayout;
 
 import java.io.File;
 
+import cn.com.chaochuang.editetextview.R;
 import cn.com.chaochuang.editetextview.data.TouchPos;
 
 
@@ -26,12 +22,14 @@ public class FontTextView extends AppCompatTextView {
 
     private Context context;
     private float downX, downY, originLeft, originTop, originRight, originBottom;
-    private int viewMinWidth = 100, viewMinHeight = 100;
+    private int viewMinWidth = 200, viewMinHeight = 100;
 
     /**
      * 边框画笔
      */
     private Paint borderPaint;
+    private Paint drawPaint;
+    private Bitmap moveBitmap,expendBitmap;
     /**
      * 第一个接触点位置标示
      */
@@ -59,12 +57,19 @@ public class FontTextView extends AppCompatTextView {
     private void initTextView(Context context) {
         this.context = context;
 
+        //边框画笔
         this.borderPaint = new Paint();
         this.borderPaint.setStyle(Paint.Style.STROKE);
         this.borderPaint.setStrokeWidth(4f);
-        this.borderPaint.setColor(Color.BLUE);
+        this.borderPaint.setColor(getResources().getColor(R.color.edit_view_border));
         this.borderPaint.setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
 
+        //图形
+        moveBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.ic_move);
+        expendBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.ic_expend);
+        drawPaint = new Paint();
+
+        setPadding(10,10,10,10);
     }
 
     /**
@@ -183,6 +188,9 @@ public class FontTextView extends AppCompatTextView {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        //画上边框
         canvas.drawRect(getLeft(), getTop(), getRight(), getBottom(), borderPaint);
+        canvas.drawBitmap(moveBitmap,getLeft()-20,getTop()-20,drawPaint);
+        canvas.drawBitmap(expendBitmap,getRight()-20,getBottom()-20,drawPaint);
     }
 }
