@@ -28,11 +28,15 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import cn.com.chaochuang.editetextview.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.model.*;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
 import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
@@ -544,6 +548,17 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     @Override
     public boolean onTap(MotionEvent e) {
         Log.d("pdfview","action : "+e.getAction());
+
+        //todo
+        FontTextView autoFixTextView = new FontTextView(this);
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        autoFixTextView.setLayoutParams(layoutParams);
+        autoFixTextView.setX(e.getX());
+        autoFixTextView.setY(e.getY());
+        autoFixTextView.setText("测试字体");
+        autoFixTextView.setPadding(10,10,10,10);
+        pdfView.addView(autoFixTextView);
+
         return false;
     }
 

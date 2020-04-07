@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
         intent.putExtra(Constants.KEY_IS_DOC_MODE, true);
         intent.putExtra(Constants.KEY_PEN_ONLY, false);
         intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NTgwOTgwNH0.lrtt1yrWNpL_1kABoYAWvOy1ZYv6EGEnDp8KN6iVXDU");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NjMwODkyMX0.ArWJ1EXaE7JDggbXZ9kH64dQVwnfTgtnnZXbNwx05PU");
         startActivityForResult(intent,1001);
 
     }
