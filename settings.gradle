@@ -1,1 +1,1 @@
-include ':app', ':pdf-operation', ':comlibs', ':writingpen', ':android-pdf-viewer', ':editetextview'
+include ':app', ':pdf-operation', ':comlibs', ':writingpen', ':android-pdf-viewer'

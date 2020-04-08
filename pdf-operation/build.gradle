@@ -42,6 +42,5 @@ dependencies {
     implementation project(path: ':comlibs')
     implementation project(path: ':writingpen')
     implementation project(path: ':android-pdf-viewer')
-    implementation project(path: ':editetextview')
 
 }

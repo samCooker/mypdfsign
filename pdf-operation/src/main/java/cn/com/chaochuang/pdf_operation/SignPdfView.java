@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -36,9 +37,9 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import cn.com.chaochuang.editetextview.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.model.*;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
+import cn.com.chaochuang.pdf_operation.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
 import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
 import cn.com.chaochuang.pdf_operation.ui.actionsheet.ActionSheet;
@@ -74,6 +75,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
 
 /**
@@ -136,7 +139,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     /**
      * 手写批注菜单按钮
      */
-    private AppCompatButton btnClear, btnSave, btnPen , btnErase , btnEraseSetting, btnSubmit;
+    private AppCompatButton btnSave, btnPen , btnErase , btnEraseSetting, btnSubmit, btnTextInput;
 
     /**
      * 弹出框
@@ -351,27 +354,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
         //endregion
 
-        //region 手写签批清空
-        btnClear = getMenuButton(getResources().getDrawable(R.drawable.ic_clear), "清 空");
-        btnClear.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                if(clearSignAlert==null){
-                    clearSignAlert = new AlertView("提示", "是否清空", "取消", new String[]{"确定"}, null, SignPdfView.this, AlertView.Style.Alert, new OnItemClickListener() {
-                        @Override
-                        public void onItemClick(Object o, int position) {
-                            Log.d("alert",position+"");
-                            if(position==0){
-                                drawPenView.clearView();
-                            }
-                        }
-                    }).setCancelable(true);
-                }
-                clearSignAlert.show();
-            }
-        });
-        //endregion
+        btnTextInput = getMenuButton(getResources().getDrawable(R.drawable.ic_text), "文 字");
 
         //region 设置画笔样式
         penSettingFragment = new PenSettingFragment();
@@ -456,6 +439,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         menuButton.setText(btnName);
         menuButton.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
         menuButton.setCompoundDrawablesWithIntrinsicBounds(null,drawable,null,null);
+        menuButton.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.MATCH_PARENT));
         return menuButton;
     }
 
@@ -1009,7 +993,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if(!readMode) {
             actionsMenu.addView(btnSave);
             actionsMenu.addView(btnErase);
-//            actionsMenu.addView(btnClear);
             actionsMenu.addView(btnPen);
             menuCount+=3;
         }
@@ -1019,7 +1002,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             menuCount++;
         }
 
-        if(closeViewItem.getWidth()*menuCount>outMetrics.widthPixels){
+        int width = outMetrics.widthPixels;
+
+        if(270*menuCount>width){
             arrowLeft.setVisibility(View.VISIBLE);
             arrowRight.setVisibility(View.VISIBLE);
             layoutParams.gravity = Gravity.START;
