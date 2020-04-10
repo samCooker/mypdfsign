@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -25,16 +26,20 @@ import android.support.v7.widget.AppCompatButton;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import cn.com.chaochuang.pdf_operation.model.*;
@@ -104,6 +109,13 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private PenSettingFragment penSettingFragment;
     private EraseSettingFragment eraseSettingFragment;
 
+    /**
+     * 文字输入弹窗
+     */
+    private AlertView textInputDlg;
+    private EditText editText;
+    private FontTextView textView;
+
     private Paint paint;
     private Paint commentPaint;
 
@@ -142,14 +154,17 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private AppCompatButton btnSave, btnPen , btnErase , btnEraseSetting, btnSubmit, btnTextInput;
 
     /**
-     * 弹出框
+     * 顶部提示栏
      */
-    private AlertView clearSignAlert;
+    private TextView barTextView;
 
     private boolean eraseFlag = false;
+    private boolean textInputFlag = false;
     private boolean isDestroy = false;
 
-    //虚线边框padding
+    /**
+     * 手写签批 虚线边框padding
+     * */
     private float editLinePadding = 10f;
     private ActionSheet editActionSheet;
     private ActionSheet infoActionSheet;
@@ -157,6 +172,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
     private int REQ_CODE=100;
     private long exitTime;
+
+    private int screenWidth;
+    private int screenHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -197,6 +215,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
         progressDialog.setCancelable(false);
+
+        //顶部提示栏
+        barTextView = findViewById(R.id.bar_msg_tv);
 
         //dialog
         jumpToFragment = new JumpToFragment();
@@ -248,6 +269,13 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         actionHandler = new MyHandler(this);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        //屏幕宽高
+        Display display = getWindowManager().getDefaultDisplay();
+        Point point = new Point();
+        display.getSize(point);
+        screenWidth = point.x;
+        screenHeight = point.y;
 
         //获取权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -354,8 +382,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
         //endregion
 
-        btnTextInput = getMenuButton(getResources().getDrawable(R.drawable.ic_text), "文 字");
-
         //region 设置画笔样式
         penSettingFragment = new PenSettingFragment();
         penSettingFragment.setOnSaveListener(new PenSettingFragment.OnSaveListener() {
@@ -415,6 +441,58 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
         //endregion
 
+
+        //region 文字批注
+        btnTextInput = getMenuButton(getResources().getDrawable(R.drawable.ic_text), "文 字");
+        btnTextInput.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                textInputFlag = !textInputFlag;
+                if (textInputFlag) {
+                    showMessageBar("请点击屏幕，选择输入文字的位置");
+                    btnTextInput.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_close), null, null);
+                    btnTextInput.setText("退出文字批注");
+                    actionsMenu.removeAllViews();
+                    actionsMenu.addView(btnTextInput);
+                } else {
+                    exitTextInputMode();
+                }
+            }
+        });
+        //endregion
+
+        //region 文字输入对话框
+        textInputDlg = new AlertView("文字输入", null, "取 消", null, new String[]{"确定"}, this, AlertView.Style.Alert, new OnItemClickListener() {
+            @Override
+            public void onItemClick(Object o, int position) {
+                if(textView!=null) {
+                    textView.setText(editText.getText());
+                    pdfView.addView(textView);
+                }
+                exitTextInputMode();
+            }
+        }).setCancelable(false);
+        View inputTextView = LayoutInflater.from(this).inflate(R.layout.fg_text_input,null);
+        editText = inputTextView.findViewById(R.id.et_text_input);
+        editText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                textInputDlg.setMarginBottom(hasFocus?120:0);
+            }
+        });
+        textInputDlg.addExtView(inputTextView);
+        //endregion
+    }
+
+    /**
+     * 退出文字批注
+     */
+    private void exitTextInputMode() {
+        textInputFlag = false;
+        btnTextInput.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_text), null, null);
+        btnTextInput.setText("文 字");
+        hideMessageBar();
+        addActionBtns();
     }
 
     /**
@@ -526,22 +604,41 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
     /**
      * 页面点击事件
-     * @param e MotionEvent that registered as a confirmed single tap
      * @return
      */
     @Override
     public boolean onTap(MotionEvent e) {
-        Log.d("pdfview","action : "+e.getAction());
+        Log.d("pdfview","x : "+e.getX()+ " y : "+e.getY() + ",screenWidth "+screenWidth+",screenHeight "+screenHeight);
 
-        //todo
-        FontTextView autoFixTextView = new FontTextView(this);
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        autoFixTextView.setLayoutParams(layoutParams);
-        autoFixTextView.setX(e.getX());
-        autoFixTextView.setY(e.getY());
-        autoFixTextView.setText("测试字体");
-        pdfView.addView(autoFixTextView);
+        //文字批注模式
+        if(textInputFlag) {
 
+            //判断该位置是否可以新增文字批注
+            if(e.getX()<FontTextView.borderPadding||e.getY()<FontTextView.borderPadding||e.getX()+FontTextView.viewMaxWidth>screenWidth||e.getY()+FontTextView.viewMaxHeight>screenHeight){
+                Toast.makeText(SignPdfView.this,"请点击其它位置",Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            textView = new FontTextView(SignPdfView.this);
+            textView.setX(e.getX());
+            textView.setY(e.getY());
+            textView.setOnTextClickListener(new FontTextView.OnTextClickListener() {
+                @Override
+                public void onTextEdit() {
+
+                }
+
+                @Override
+                public void onTextDelete() {
+                    pdfView.removeView(textView);
+                    textView=null;
+                }
+            });
+
+            textInputDlg.show();
+            editText.setFocusable(true);
+            return true;
+        }
         return false;
     }
 
@@ -991,6 +1088,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         }
 
         if(!readMode) {
+            actionsMenu.addView(btnTextInput);
             actionsMenu.addView(btnSave);
             actionsMenu.addView(btnErase);
             actionsMenu.addView(btnPen);
@@ -1114,6 +1212,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             }
             Object dataObj = msg.obj;
             switch (msg.what){
+                case MSG_TOAST:
+                    signPdfView.showMessageBar(dataObj.toString());
+                    break;
                 case MSG_FIND_COMMENT_LIST:
                     signPdfView.findCommentSuccess();
                     break;
@@ -1163,6 +1264,20 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 default:
             }
         }
+    }
+
+    /**
+     * 在顶部栏显示文本信息
+     * @param txt
+     */
+    private void showMessageBar(String txt){
+        if(txt!=null&&txt.trim()!="") {
+            barTextView.setText(txt);
+            barTextView.setVisibility(View.VISIBLE);
+        }
+    }
+    private void hideMessageBar(){
+        barTextView.setVisibility(View.INVISIBLE);
     }
 
     @Override

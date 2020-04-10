@@ -11,4 +11,5 @@
     <dimen name="pdf_action_text_size">12sp</dimen>
     <dimen name="pdf_rounded_corner">8dp</dimen>
     <dimen name="pdf_arrow_size">20dp</dimen>
+    <dimen name="pdf_msg_tip_size">16sp</dimen>
 </resources>

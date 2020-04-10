@@ -50,10 +50,15 @@ public class CommentData {
     private Bitmap imageBitmap;
 
     /**
-     *  屏幕上图片的原坐标
+     * 屏幕上图片的原坐标
      */
     private float signX;
     private float signY;
+
+    /**
+     * 文字内容
+     */
+    private String txtContent;
 
     //TODO 暂时无用
     private Rect srcRect;
@@ -239,5 +244,13 @@ public class CommentData {
 
     public void setZoom(float zoom) {
         this.zoom = zoom;
+    }
+
+    public String getTxtContent() {
+        return txtContent;
+    }
+
+    public void setTxtContent(String txtContent) {
+        this.txtContent = txtContent;
     }
 }

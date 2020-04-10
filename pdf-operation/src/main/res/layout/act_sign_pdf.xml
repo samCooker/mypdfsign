@@ -41,4 +41,18 @@
                 />
     </com.github.barteksc.pdfviewer.PDFView>
 
+    <TextView
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="30dp"
+        android:layout_marginTop="@dimen/pdf_toolbar_height"
+        android:textAlignment="center"
+        android:textColor="@color/pdf_red"
+        android:textSize="@dimen/pdf_msg_tip_size"
+        android:padding="4dp"
+        android:visibility="invisible"
+        android:id="@+id/bar_msg_tv"
+        android:background="@color/pdf_tip_bg"
+        />
+
 </RelativeLayout>

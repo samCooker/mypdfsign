@@ -20,7 +20,7 @@ import java.io.File;
 
 import cn.com.chaochuang.pdf_operation.R;
 import cn.com.chaochuang.pdf_operation.model.TouchPos;
-import cn.com.chaochuang.pdf_operation.utils.DensityUtil;
+import cn.com.chaochuang.writingpen.model.CommentData;
 
 
 /**
@@ -28,15 +28,24 @@ import cn.com.chaochuang.pdf_operation.utils.DensityUtil;
  */
 public class FontTextView extends AppCompatTextView {
 
+    /**
+     * 最大高度和宽度
+     */
+    public static int viewMaxWidth=800,viewMaxHeight=500;
+    /**
+     * 边框留白大小
+     */
+    public static int borderPadding = 80;
+
+    private CommentData commentData;
     private Context context;
     private float downX, downY, originLeft, originTop, originRight, originBottom;
-    private int viewMaxWidth,viewMaxHeight;
     /**
      * 边框画笔
      */
     private Paint borderPaint;
     private Paint drawPaint;
-    private Bitmap moveBitmap,expendBitmap;
+    private Bitmap moveBitmap,expendBitmap,deleteBitmap;
     /**
      * 第一个接触点位置标示
      */
@@ -44,10 +53,15 @@ public class FontTextView extends AppCompatTextView {
     /**
      *
      */
-    private int borderPadding = 80;
     private int viewTouchPadding = borderPadding;
 
     private int viewMinWidth = borderPadding*2, viewMinHeight = borderPadding*2;
+    /**
+     * 圆形边框宽度
+     */
+    private int circleBorderWidth=2;
+
+    private OnTextClickListener onTextClickListener;
 
     public FontTextView(Context context) {
         super(context);
@@ -67,6 +81,9 @@ public class FontTextView extends AppCompatTextView {
     private void initTextView(Context context) {
         this.context = context;
 
+        setMaxWidth(viewMaxWidth);
+        setMaxHeight(viewMaxHeight);
+
         //边框画笔
         this.borderPaint = new Paint();
         this.borderPaint.setStyle(Paint.Style.STROKE);
@@ -75,11 +92,15 @@ public class FontTextView extends AppCompatTextView {
         this.borderPaint.setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
 
         //图形
-        moveBitmap = getBitmapFromVectorDrawable(R.drawable.ic_move);
-        expendBitmap = getBitmapFromVectorDrawable(R.drawable.ic_expend);
+        moveBitmap = getBitmapFromVectorDrawable(R.drawable.edit_move);
+        expendBitmap = getBitmapFromVectorDrawable(R.drawable.edit_expend);
+        deleteBitmap = getBitmapFromVectorDrawable(R.drawable.edit_delete);
         drawPaint = new Paint();
 
         setPadding(borderPadding,borderPadding,borderPadding,borderPadding);
+
+        //数据实体
+        commentData = new CommentData();
     }
 
     public Bitmap getBitmapFromVectorDrawable(int drawableId) {
@@ -98,10 +119,6 @@ public class FontTextView extends AppCompatTextView {
             return bitmap;
         }
         return null;
-    }
-
-    public void setViewMaxSize(){
-
     }
 
     /**
@@ -154,6 +171,17 @@ public class FontTextView extends AppCompatTextView {
                 Log.d("touchPos", touchPos + "");
                 break;
             case MotionEvent.ACTION_UP:
+                if (touchPos == TouchPos.POS_CENTER){
+                    //编辑
+                    if(onTextClickListener !=null){
+                        onTextClickListener.onTextEdit();
+                    }
+                }else if(touchPos == TouchPos.POS_TOP_LEFT){
+                    //删除
+                    if(onTextClickListener!=null){
+                        onTextClickListener.onTextDelete();
+                    }
+                }
                 break;
             case MotionEvent.ACTION_MOVE:
                 //
@@ -165,18 +193,14 @@ public class FontTextView extends AppCompatTextView {
 
                     switch (touchPos) {
                         //点击中心移动
-                        case TouchPos.POS_TOP_LEFT:
+                        case TouchPos.POS_TOP_RIGHT:
                             //判断是否超出屏幕
-
                             setX(l);
                             setY(t);
                             break;
                         //点击右下角放大缩小
                         case TouchPos.POS_BOTTOM_RIGHT:
                             expendLayout(moveX, moveY);
-                            break;
-                        //编辑
-                        case TouchPos.POS_CENTER:
                             break;
                     }
                 }
@@ -230,38 +254,76 @@ public class FontTextView extends AppCompatTextView {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        canvas.save();
         float left = getLeft()+borderPadding/2f;
         float top = getTop()+borderPadding/2f;
         float right = getRight()-borderPadding/2f;
         float bottom = getBottom()-borderPadding/2f;
         //边框
         canvas.drawRect(left, top, right, bottom, borderPaint);
-        //左上角实心圆
-        canvas.translate(left,top);
-        drawPaint.setColor(getResources().getColor(R.color.pdf_comment_circle));
-        drawPaint.setStyle(Paint.Style.FILL);
-        canvas.drawCircle(0,0,borderPadding/2f,drawPaint);
-        //左上角圆边框
-        drawPaint.setColor(getResources().getColor(R.color.pdf_comment_border));
-        drawPaint.setStyle(Paint.Style.STROKE);
-        canvas.drawCircle(0,0,borderPadding/2f,drawPaint);
+
+        //删除图标
+        drawBorderCorner(left,top,canvas,deleteBitmap);
         //移动图标
-        canvas.drawBitmap(moveBitmap,-moveBitmap.getWidth()/2f,-moveBitmap.getHeight()/2f,drawPaint);
-        canvas.restore();
+        drawBorderCorner(right,top,canvas,moveBitmap);
+        //拉伸图标
+        drawBorderCorner(right,bottom,canvas,expendBitmap);
+
+    }
+
+    /**
+     * 画上边角的圆圈及图像
+     * @param x 原点x坐标
+     * @param y 原点y坐标
+     * @param canvas
+     * @param bitmap
+     */
+    private void drawBorderCorner(float x,float y,Canvas canvas, Bitmap bitmap) {
 
         canvas.save();
-        canvas.translate(right,bottom);
-        //右下角实心圆
+        //右上角实心圆
+        canvas.translate(x,y);
         drawPaint.setColor(getResources().getColor(R.color.pdf_comment_circle));
         drawPaint.setStyle(Paint.Style.FILL);
         canvas.drawCircle(0,0,borderPadding/2f,drawPaint);
-        //右下角圆边框
+        //右上角圆边框
         drawPaint.setColor(getResources().getColor(R.color.pdf_comment_border));
         drawPaint.setStyle(Paint.Style.STROKE);
-        canvas.drawCircle(0,0,borderPadding/2f,drawPaint);
-        //拉伸图标
-        canvas.drawBitmap(expendBitmap,-expendBitmap.getWidth()/2f,-expendBitmap.getHeight()/2f,drawPaint);
+        drawPaint.setStrokeWidth(circleBorderWidth);
+        canvas.drawCircle(0,0,borderPadding/2f-circleBorderWidth,drawPaint);
+        //移动图标
+        canvas.drawBitmap(bitmap,-bitmap.getWidth()/2f,-bitmap.getHeight()/2f,drawPaint);
         canvas.restore();
     }
+
+    /**
+     * 点击事件
+     * @param onTextClickListener
+     */
+    public void setOnTextClickListener(OnTextClickListener onTextClickListener){
+        this.onTextClickListener = onTextClickListener;
+    }
+    public interface OnTextClickListener {
+
+        void onTextEdit();
+
+        void onTextDelete();
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int getViewTouchPadding() {
+        return viewTouchPadding;
+    }
+
+    public CommentData getCommentData() {
+        return commentData;
+    }
+
+    public void setCommentData(CommentData commentData) {
+        this.commentData = commentData;
+    }
+
+
 }

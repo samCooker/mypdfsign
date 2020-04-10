@@ -120,6 +120,7 @@ public class PenSettingFragment extends DialogFragment {
             }
         });
         settingDialog = builder.create();
+        settingDialog.setTitle("手写笔设置");
         settingDialog.setCancelable(false);
         setCancelable(false);
         settingDialog.setView(settingContent);

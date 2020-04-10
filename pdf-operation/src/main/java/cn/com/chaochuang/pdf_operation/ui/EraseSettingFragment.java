@@ -31,7 +31,7 @@ import cn.com.chaochuang.pdf_operation.model.PenColorAdaptor;
 public class EraseSettingFragment extends DialogFragment {
 
 
-    public static final String ERASE_WIDTH="penMaxSize";
+    public static final String ERASE_WIDTH="eraseWidth";
 
     private SharedPreferences penSettingData;
 
@@ -104,6 +104,7 @@ public class EraseSettingFragment extends DialogFragment {
             }
         });
         settingDialog = builder.create();
+        settingDialog.setTitle("橡皮擦大小设置");
         settingDialog.setCancelable(false);
         setCancelable(false);
         settingDialog.setView(settingContent);

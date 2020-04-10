@@ -57,6 +57,7 @@ public class Constants {
     public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
     public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
 
+    public static final int MSG_TOAST =0;
     public static final int MSG_FIND_COMMENT_LIST =1;
     public static final int MSG_SAVE_COMMENT_LIST =2;
     public static final int MSG_SAVE_COMMENT_AND_SUBMIT =21;
