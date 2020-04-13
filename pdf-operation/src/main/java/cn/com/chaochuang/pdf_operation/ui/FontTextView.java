@@ -14,6 +14,7 @@ import android.support.v7.widget.AppCompatTextView;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
 import java.io.File;
@@ -29,9 +30,10 @@ import cn.com.chaochuang.writingpen.model.CommentData;
 public class FontTextView extends AppCompatTextView {
 
     /**
-     * 最大高度和宽度
+     * 初始的最大高度和宽度
      */
-    public static int viewMaxWidth=800,viewMaxHeight=500;
+    public static int viewMaxWidth=400,viewMaxHeight=400;
+    public float screenMaxWidth,screenMaxHeight;
     /**
      * 边框留白大小
      */
@@ -103,6 +105,8 @@ public class FontTextView extends AppCompatTextView {
         commentData = new CommentData();
     }
 
+
+
     public Bitmap getBitmapFromVectorDrawable(int drawableId) {
         Drawable drawable = ContextCompat.getDrawable(this.context, drawableId);
         if(drawable!=null) {
@@ -133,26 +137,13 @@ public class FontTextView extends AppCompatTextView {
         }
     }
 
-    /**
-     * 拉伸
-     * @param ex
-     * @param ey
-     */
-    public void expendLayout(float ex, float ey) {
-
-        int expendX = (int) (originRight + ex), expendY = (int) (originBottom + ey);
-        if (expendX < viewMinWidth) {
-            expendX = viewMinWidth;
-        }
-        if (expendY < viewMinHeight) {
-            expendY = viewMinHeight;
-        }
-        setLayoutParams(new RelativeLayout.LayoutParams(expendX, expendY));
-    }
-
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+        ViewGroup view = (ViewGroup) getParent();
+        screenMaxWidth = view.getWidth();
+        screenMaxHeight = view.getHeight();
     }
 
     @Override
@@ -185,28 +176,64 @@ public class FontTextView extends AppCompatTextView {
                 break;
             case MotionEvent.ACTION_MOVE:
                 //
-                float moveX = event.getX() - downX;
-                float moveY = event.getY() - downY;
-                if (Math.abs(moveX) > 3 || Math.abs(moveY) > 3) {
-                    float l = (getX() + moveX);
-                    float t = (getY() + moveY);
+                    float moveX = event.getX() - downX;
+                    float moveY = event.getY() - downY;
+                    if (Math.abs(moveX) > 3 || Math.abs(moveY) > 3) {
 
-                    switch (touchPos) {
-                        //点击中心移动
-                        case TouchPos.POS_TOP_RIGHT:
-                            //判断是否超出屏幕
-                            setX(l);
-                            setY(t);
-                            break;
-                        //点击右下角放大缩小
-                        case TouchPos.POS_BOTTOM_RIGHT:
-                            expendLayout(moveX, moveY);
-                            break;
+                        switch (touchPos) {
+                            //点击中心移动
+                            case TouchPos.POS_TOP_RIGHT:
+                                moveView(moveX,moveY);
+                                break;
+                            //点击右下角放大缩小
+                            case TouchPos.POS_BOTTOM_RIGHT:
+                                extendView(moveX, moveY);
+                                break;
+                        }
                     }
-                }
                 break;
         }
         return true;
+    }
+
+    /**
+     * 移动
+     * @param moveX
+     * @param moveY
+     */
+    private void moveView(float moveX, float moveY) {
+        //note: getX()获取view左上角x坐标
+        float x = getX() + moveX;
+        float y = getY() + moveY;
+        //判断是否超出屏幕
+        if(x>0&&x<screenMaxWidth-originRight-originLeft) {
+            setX(x);
+        }
+        if(y>0&&y<screenMaxHeight-originBottom-originTop){
+            setY(y);
+        }
+    }
+
+
+    /**
+     * 拉伸
+     * @param ex
+     * @param ey
+     */
+    public void extendView(float ex, float ey) {
+
+        float width = originRight-originLeft + ex, height = originBottom-originTop + ey;
+        if (width < viewMinWidth) {
+            width = viewMinWidth;
+        }else if(width>screenMaxWidth-getX()){
+            width= screenMaxWidth-getX();
+        }
+        if (height < viewMinHeight) {
+            height = viewMinHeight;
+        }else if(height>screenMaxHeight-getY()){
+            height = screenMaxHeight-getY();
+        }
+        setLayoutParams(new RelativeLayout.LayoutParams((int)width, (int)height));
     }
 
     /**

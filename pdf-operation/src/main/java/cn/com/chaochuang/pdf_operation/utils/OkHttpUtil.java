@@ -176,12 +176,14 @@ public class OkHttpUtil {
         MessageDigest md = null;
         FileInputStream in = null;
         try {
-            md = MessageDigest.getInstance("MD5");
-            in = new FileInputStream(file);
-            FileChannel ch = in.getChannel();
-            MappedByteBuffer byteBuffer = ch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
-            md.update(byteBuffer);
-            return bufferToHex(md.digest());
+            if(file.exists()) {
+                md = MessageDigest.getInstance("MD5");
+                in = new FileInputStream(file);
+                FileChannel ch = in.getChannel();
+                MappedByteBuffer byteBuffer = ch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
+                md.update(byteBuffer);
+                return bufferToHex(md.digest());
+            }
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
         } finally {
