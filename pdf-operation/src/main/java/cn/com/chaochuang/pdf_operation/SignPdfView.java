@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.*;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -38,7 +37,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -80,8 +78,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
 
 /**
@@ -624,12 +620,16 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             textView.setY(e.getY());
             textView.setOnTextClickListener(new FontTextView.OnTextClickListener() {
                 @Override
-                public void onTextEdit() {
-
+                public void onTextEdit(CommentData commentData) {
+                    if(commentData!=null) {
+                        editText.setText(commentData.getTxtContent());
+                    }
+                    textInputDlg.show();
                 }
 
                 @Override
-                public void onTextDelete() {
+                public void onTextDelete(CommentData commentData) {
+                    //todo
                     pdfView.removeView(textView);
                     textView=null;
                 }
