@@ -2,7 +2,10 @@ package cn.com.chaochuang.pdf_operation;
 
 import android.Manifest;
 import android.app.ProgressDialog;
-import android.content.*;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -28,32 +31,18 @@ import android.util.TypedValue;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import cn.com.chaochuang.pdf_operation.model.*;
-import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
-import cn.com.chaochuang.pdf_operation.ui.FontTextView;
-import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
-import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
-import cn.com.chaochuang.pdf_operation.ui.actionsheet.ActionSheet;
-import cn.com.chaochuang.pdf_operation.ui.actionsheet.OnActionListener;
-import cn.com.chaochuang.pdf_operation.utils.Constants;
-import cn.com.chaochuang.pdf_operation.utils.ImageTools;
-import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
-import cn.com.chaochuang.writingpen.model.CommentData;
 import com.alibaba.fastjson.JSON;
 import com.bigkoo.alertview.AlertView;
-import com.bigkoo.alertview.OnItemClickListener;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.OnDrawListener;
 import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener;
@@ -62,10 +51,6 @@ import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
 import com.github.barteksc.pdfviewer.listener.OnTapListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.shockwave.pdfium.util.SizeF;
-
-import cn.com.chaochuang.writingpen.model.SignBitmapData;
-import cn.com.chaochuang.writingpen.ui.DrawPenView;
-import okhttp3.*;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -78,7 +63,54 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
+import cn.com.chaochuang.pdf_operation.model.AppResponse;
+import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
+import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
+import cn.com.chaochuang.pdf_operation.ui.FontTextView;
+import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
+import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
+import cn.com.chaochuang.pdf_operation.ui.TextInputFragment;
+import cn.com.chaochuang.pdf_operation.ui.actionsheet.ActionSheet;
+import cn.com.chaochuang.pdf_operation.ui.actionsheet.OnActionListener;
+import cn.com.chaochuang.pdf_operation.ui.listener.OnClickItemListener;
+import cn.com.chaochuang.pdf_operation.utils.Constants;
+import cn.com.chaochuang.pdf_operation.utils.ImageTools;
+import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
+import cn.com.chaochuang.writingpen.model.CommentData;
+import cn.com.chaochuang.writingpen.model.SignBitmapData;
+import cn.com.chaochuang.writingpen.ui.DrawPenView;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+
+import static cn.com.chaochuang.pdf_operation.utils.Constants.DATA_FORMAT1;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_CURRENT_PAGE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_FLOW_INST_ID;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_DOC_MODE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_HIDE_ANNOT;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_READ_MODE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_NODE_INST_ID;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DEL_COMMENT_LIST;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DOWNLOAD_ERROR;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_FIND_COMMENT_LIST;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_HIDE_LOADING;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_PDF_PAGE_CHANGE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_REFRESH_PDF_VIEW;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_RESPONSE_MSG;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_AND_SUBMIT;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_LIST;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_CONFIRM_DLG;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_LOADING;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_TOAST;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_FILE_ID;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_USER_NAME;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_DOWNLOAD_FILE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_GET_MD5;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_DELETE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_SAVE;
 
 /**
  * 2019-4-23
@@ -108,8 +140,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     /**
      * 文字输入弹窗
      */
-    private AlertView textInputDlg;
-    private EditText editText;
+    private TextInputFragment textInputDlg;
     private FontTextView textView;
 
     private Paint paint;
@@ -175,6 +206,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
+
         isDestroy = false;
         setContentView(R.layout.act_sign_pdf);
 
@@ -386,6 +420,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 initPenStyle();
             }
         });
+
         btnPen = getMenuButton(getResources().getDrawable(R.drawable.ic_setting), "设 置");
         btnPen.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -458,25 +493,16 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         //endregion
 
         //region 文字输入对话框
-        textInputDlg = new AlertView("文字输入", null, "取 消", null, new String[]{"确定"}, this, AlertView.Style.Alert, new OnItemClickListener() {
+        textInputDlg = new TextInputFragment();
+        textInputDlg.setOnClickItemListener(new OnClickItemListener() {
             @Override
-            public void onItemClick(Object o, int position) {
+            public void onOkAction(String txt) {
                 if(textView!=null) {
-                    textView.setText(editText.getText());
-                    pdfView.addView(textView);
+                    textView.setText(txt);
                 }
                 exitTextInputMode();
             }
-        }).setCancelable(false);
-        View inputTextView = LayoutInflater.from(this).inflate(R.layout.fg_text_input,null);
-        editText = inputTextView.findViewById(R.id.et_text_input);
-        editText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                textInputDlg.setMarginBottom(hasFocus?120:0);
-            }
         });
-        textInputDlg.addExtView(inputTextView);
         //endregion
     }
 
@@ -618,13 +644,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             textView = new FontTextView(SignPdfView.this);
             textView.setX(e.getX());
             textView.setY(e.getY());
+            pdfView.addView(textView);
             textView.setOnTextClickListener(new FontTextView.OnTextClickListener() {
                 @Override
                 public void onTextEdit(CommentData commentData) {
-                    if(commentData!=null) {
-                        editText.setText(commentData.getTxtContent());
-                    }
-                    textInputDlg.show();
+                    textInputDlg.showFragmentDlg(commentData.getTxtContent(),getSupportFragmentManager(),"textInputDlg");
                 }
 
                 @Override
@@ -634,9 +658,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     textView=null;
                 }
             });
+            textInputDlg.showFragmentDlg(null,getSupportFragmentManager(),"textInputDlg");
 
-            textInputDlg.show();
-            editText.setFocusable(true);
             return true;
         }
         return false;

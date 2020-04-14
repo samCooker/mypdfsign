@@ -5,7 +5,7 @@
               android:orientation="vertical"
 >
     <EditText android:layout_width="match_parent"
-              android:layout_height="match_parent"
+              android:layout_height="wrap_content"
               android:minLines="6"
               android:gravity="top"
               android:lines="6"
@@ -13,4 +13,29 @@
               android:hint="请输入内容"
               android:id="@+id/et_text_input"
     />
+
+    <LinearLayout
+        android:weightSum="2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/btn_setting_cancel"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:background="@color/pdf_btn_white"
+            android:text="取  消"
+            android:textColor="@color/pdf_btn_assertive"
+            android:textSize="18sp"
+            android:layout_height="60dp"/>
+        <Button
+            android:id="@+id/btn_setting_ok"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:text="确  定"
+            android:textColor="@color/pdf_btn_white"
+            android:background="@color/pdf_btn_primary"
+            android:textSize="18sp"
+            android:layout_height="60dp"/>
+    </LinearLayout>
+
 </LinearLayout>

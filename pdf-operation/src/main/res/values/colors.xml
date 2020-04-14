@@ -6,6 +6,7 @@
     <color name="pdf_btn_white">#fafafa</color>
     <color name="pdf_btn_press">#B2DFDB</color>
     <color name="pdf_btn_primary">#4A90E2</color>
+    <color name="pdf_btn_assertive">#F44336</color>
     <color name="pdf_btn_press_white">#b4f8fa</color>
     <color name="pdf_tool_bg">#b4f8fa</color>
 
