@@ -2,6 +2,7 @@ package cn.com.chaochuang.writingpen.utils;
 
 import android.content.Context;
 import android.graphics.*;
+import android.util.Log;
 import android.view.MotionEvent;
 import cn.com.chaochuang.writingpen.model.Bezier;
 import cn.com.chaochuang.writingpen.model.ControllerPoint;
@@ -128,6 +129,7 @@ public abstract class BasePenExtend extends BasePen {
     }
 
     private void saveMaxMinCor(float x, float y) {
+        Log.d("saveMaxMinCor","x:"+x+" y:"+y);
         if(minX==-1){
             minX=x;
             maxX=x;

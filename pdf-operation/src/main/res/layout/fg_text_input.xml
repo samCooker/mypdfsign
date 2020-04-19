@@ -11,6 +11,8 @@
               android:lines="6"
               android:textColor="@color/textBlack"
               android:hint="请输入内容"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
               android:id="@+id/et_text_input"
     />
 

@@ -4,7 +4,6 @@ android {
     compileSdkVersion 28
 
 
-
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 25
@@ -30,6 +29,7 @@ android {
     lintOptions {
         abortOnError false
     }
+    sourceSets { main { assets.srcDirs = ['src/main/assets', 'src/main/assets/'] } }
 }
 
 dependencies {

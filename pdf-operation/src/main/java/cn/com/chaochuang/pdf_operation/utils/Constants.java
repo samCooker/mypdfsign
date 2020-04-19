@@ -56,6 +56,8 @@ public class Constants {
     public static final String URL_DOWNLOAD_FILE ="comment/download.mo";
     public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
     public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
+    //字体下载
+    public static final String URL_DOWNLOAD_FONT_FILE ="static/fonts/simsunb.ttf";
 
     public static final int MSG_TOAST =0;
     public static final int MSG_FIND_COMMENT_LIST =1;
@@ -69,4 +71,6 @@ public class Constants {
     public static final int MSG_PDF_PAGE_CHANGE =8;
     public static final int MSG_RESPONSE_MSG =9;
     public static final int MSG_DOWNLOAD_ERROR =10;
+    public static final int MSG_CHANGE_LOADING =11;
+    public static final int MSG_FONT_DOWNLOAD_SUCCESS =12;
 }

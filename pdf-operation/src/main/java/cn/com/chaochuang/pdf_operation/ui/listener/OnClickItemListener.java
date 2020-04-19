@@ -7,4 +7,6 @@ public interface OnClickItemListener {
 
     void onOkAction(String txt);
 
+    void onCancelAction(String txt);
+
 }

@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -31,6 +32,7 @@ public class TextInputFragment extends DialogFragment {
     private Context context;
     private View inputView;
     private EditText editText;
+    private String text;
     private Button cancelButton,okButton;
     private OnClickItemListener onClickItemListener;
 
@@ -46,7 +48,7 @@ public class TextInputFragment extends DialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
 
-        inputView =inflater.inflate(R.layout.fg_text_input,container);
+        inputView = inflater.inflate(R.layout.fg_text_input, container);
 
         return inputView;
     }
@@ -82,33 +84,39 @@ public class TextInputFragment extends DialogFragment {
         cancelButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String txt = editText.getText().toString();
+                onClickItemListener.onCancelAction(txt);
                 dismiss();
             }
         });
+
         okButton = inputView.findViewById(R.id.btn_setting_ok);
         okButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String txt = editText.getText().toString();
-                if(txt.trim().length()==0){
-                    Toast.makeText(context,"请输入内容",Toast.LENGTH_SHORT).show();
+                if (txt.trim().length() == 0) {
+                    Toast.makeText(context, "请输入内容", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 onClickItemListener.onOkAction(txt);
                 dismiss();
             }
         });
+
+        editText.setText(this.text);
+        if(this.text!=null) {
+            editText.setSelection(this.text.length());
+        }
+        editText.setFocusable(true);
+        editText.setFocusableInTouchMode(true);
+        editText.requestFocus();
+        InputMethodManager inputManager = (InputMethodManager) editText.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputManager.showSoftInput(editText, 0);
     }
 
     public void showFragmentDlg(String txt,android.support.v4.app.FragmentManager fragmentManager, String tag){
-        if(editText!=null){
-            editText.setFocusable(true);
-            if(txt!=null) {
-                editText.setText(txt);
-                editText.setSelection(txt.length());
-                editText.requestFocus();
-            }
-        }
+        this.text=txt;
         this.show(fragmentManager,tag);
     }
 

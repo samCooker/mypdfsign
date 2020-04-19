@@ -1618,6 +1618,20 @@ public class PDFView extends RelativeLayout {
         return (y+offsetY)/zoom;
     }
 
+    public float getTextSignX(float x){
+        float offsetX;
+        if (currentXOffset>=0) {
+            offsetX = currentXOffset;
+        }else{
+            SizeF size = pdfFile.getMaxPageSize();
+            offsetX = currentXOffset+(currentPage*size.getWidth()*zoom);
+        }
+        return (x-offsetX)/zoom;
+    }
+    public float getTextSignY(float y){
+        return (y-currentYOffset)/zoom;
+    }
+
     /**
      * pdf实际高度
      * @return

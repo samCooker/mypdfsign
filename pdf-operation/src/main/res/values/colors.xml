@@ -24,5 +24,5 @@
     <color name="pdf_as_title_bg">#FFECB3</color>
 
     <color name="pdf_tip_bg">#CDCDCD</color>
-
+    <color name="pdf_text_comment">#000000</color>
 </resources>

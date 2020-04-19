@@ -15,6 +15,7 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -86,31 +87,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-import static cn.com.chaochuang.pdf_operation.utils.Constants.DATA_FORMAT1;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_CURRENT_PAGE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_FLOW_INST_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_DOC_MODE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_HIDE_ANNOT;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_READ_MODE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_NODE_INST_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DEL_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DOWNLOAD_ERROR;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_FIND_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_HIDE_LOADING;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_PDF_PAGE_CHANGE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_REFRESH_PDF_VIEW;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_RESPONSE_MSG;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_AND_SUBMIT;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_CONFIRM_DLG;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_LOADING;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_TOAST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_FILE_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_USER_NAME;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_DOWNLOAD_FILE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_GET_MD5;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_DELETE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_SAVE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
 
 /**
  * 2019-4-23
@@ -142,6 +119,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     private TextInputFragment textInputDlg;
     private FontTextView textView;
+    private float txtX,txtY;
+    public static Typeface simsunTypeface;
 
     private Paint paint;
     private Paint commentPaint;
@@ -220,6 +199,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         pdfView = findViewById(R.id.pdf_view);
 
         drawPenView = findViewById(R.id.view_handwriting);
+
+        simsunTypeface = Typeface.createFromAsset(getAssets(),"simsun.ttc");
 
         paint = new Paint();
         commentPaint = new Paint();
@@ -392,17 +373,23 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 new Thread() {
                     @Override
                     public void run() {
-                        if(drawPenView.getHasDraw()){
-                            CommentData handwritingData = getSignBitmapFromSignView();
-                            if (handwritingData != null && handwritingData.getImageBitmap() != null) {
-                                sendMessage(MSG_SHOW_LOADING, "正在保存");
-                                //保存到远程服务器
-                                saveHandwritingData(handwritingData,MSG_SAVE_COMMENT_LIST);
-                            } else {
-                                sendMessage(MSG_SHOW_CONFIRM_DLG,"无手写内容");
-                            }
+                        CommentData commentData = null;
+                        if(textInputFlag&&textView!=null){
+                            commentData = textView.getSaveDate();
+                            commentData.setSignX(pdfView.getTextSignX(commentData.getSignX()));
+                            commentData.setSignY(pdfView.getTextSignY(commentData.getSignY()));
+                        }else if(drawPenView.getHasDraw()){
+                            commentData = getSignBitmapFromSignView();
                         }else{
-                            sendMessage(MSG_SHOW_CONFIRM_DLG,"无手写内容");
+                            sendMessage(MSG_SHOW_CONFIRM_DLG,"没有需要保存的内容");
+                        }
+
+                        if (commentData != null && commentData.getImageBitmap() != null) {
+                            sendMessage(MSG_SHOW_LOADING, "正在保存");
+                            //保存到远程服务器
+                            saveHandwritingData(commentData,MSG_SAVE_COMMENT_LIST);
+                        } else {
+                            sendMessage(MSG_SHOW_CONFIRM_DLG,"没有需要保存的内容");
                         }
 
                     }
@@ -461,6 +448,13 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     actionsMenu.removeAllViews();
                     actionsMenu.addView(btnErase);
                     actionsMenu.addView(btnEraseSetting);
+
+                    arrowLeft.setVisibility(View.INVISIBLE);
+                    arrowRight.setVisibility(View.INVISIBLE);
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+                    layoutParams.gravity = Gravity.CENTER;
+                    actionsMenu.setLayoutParams(layoutParams);
+
                 } else {
                     Toast.makeText(SignPdfView.this, "已退出橡皮擦模式", Toast.LENGTH_LONG).show();
                     btnErase.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_erase), null, null);
@@ -478,15 +472,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         btnTextInput.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                textInputFlag = !textInputFlag;
-                if (textInputFlag) {
-                    showMessageBar("请点击屏幕，选择输入文字的位置");
-                    btnTextInput.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_close), null, null);
-                    btnTextInput.setText("退出文字批注");
-                    actionsMenu.removeAllViews();
-                    actionsMenu.addView(btnTextInput);
-                } else {
+                if(textInputFlag){
                     exitTextInputMode();
+                }else{
+                    intoTextInputMode();
                 }
             }
         });
@@ -495,15 +484,142 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         //region 文字输入对话框
         textInputDlg = new TextInputFragment();
         textInputDlg.setOnClickItemListener(new OnClickItemListener() {
+
             @Override
             public void onOkAction(String txt) {
-                if(textView!=null) {
-                    textView.setText(txt);
+                hideMessageBar();
+                if(textView ==null){
+
+                    textView = new FontTextView(SignPdfView.this);
+                    textView.setX(txtX-textView.getChopSize());
+                    textView.setY(txtY-textView.getChopSize());
+                    textView.setTypeface(simsunTypeface);
+                    textView.setOnTextClickListener(new FontTextView.OnTextClickListener() {
+                        @Override
+                        public void onTextEdit(CommentData commentData) {
+                            pdfView.removeView(textView);
+                            textView.setEditMode(true);
+                            textInputDlg.showFragmentDlg(commentData.getTxtContent(),getSupportFragmentManager(),"textInputDlg");
+                        }
+
+                        @Override
+                        public void onTextDelete(CommentData commentData) {
+                            pdfView.removeView(textView);
+                            showMessageBar("请点击屏幕，选择输入文字的位置");
+                            textView=null;
+                        }
+                    });
                 }
-                exitTextInputMode();
+                textView.setText(txt);
+                pdfView.addView(textView);
+            }
+
+            @Override
+            public void onCancelAction(String txt) {
+                if(textView!=null&&txt!=null&&txt.length()>0&&textView.isEditMode()) {
+                    pdfView.addView(textView);
+                }else{
+                    showMessageBar("请点击屏幕，选择输入文字的位置");
+                    textView = null;
+                }
             }
         });
         //endregion
+    }
+
+    /**
+     * 下载字体文件
+     */
+    private void downloadFontFile(){
+//        File fontFolder = new File(Environment.getExternalStorageDirectory(),"Fonts");
+//        if(!fontFolder.exists()){
+//            fontFolder.mkdirs();
+//        }
+//        final File fontFile = new File(fontFolder,"kaiti.ttf");
+//        if(!fontFile.exists()) {
+//            sendMessage(MSG_SHOW_LOADING, "正在下载文件");
+//            OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).build();
+//            Request request = new Request.Builder().url(serverUrl + URL_DOWNLOAD_FONT_FILE).header(Constants.HEADER_TOKEN_NAME, serverToken).build();
+//            httpClient.newCall(request).enqueue(new Callback() {
+//                @Override
+//                public void onFailure(Call call, IOException e) {
+//                    fontFile.delete();
+//                    sendMessage(MSG_RESPONSE_MSG, "文件下载失败，请尝试重新打开");
+//                }
+//
+//                @Override
+//                public void onResponse(Call call, Response response) throws IOException {
+//                    ResponseBody responseBody = null;
+//                    BufferedInputStream bis = null;
+//                    FileOutputStream fos = null;
+//                    try {
+//                        if (call.isCanceled()) {
+//                            sendMessage(MSG_HIDE_LOADING, null);
+//                            sendMessage(MSG_RESPONSE_MSG, "已取消文件下载");
+//                            return;
+//                        }
+//                        if (response.isSuccessful()) {
+//                            responseBody = response.body();
+//                            long total = responseBody.contentLength();
+//                            bis = new BufferedInputStream(responseBody.byteStream());
+//                            fos = new FileOutputStream(fontFile);
+//                            byte[] bytes = new byte[1024 * 8];
+//                            int len;
+//                            long current = 0;
+//                            while ((len = bis.read(bytes)) != -1) {
+//                                fos.write(bytes, 0, len);
+//                                fos.flush();
+//                                current += len;
+//                                //计算进度
+//                                int progress = (int) (100 * current / total);
+//                                Log.d(TAG, "下载进度：" + progress);
+//                                sendMessage(MSG_CHANGE_LOADING,"正在下载字体文件（已完成：" + progress + "%）");
+//                            }
+//                            simsunTypeface = Typeface.createFromFile(fontFile);
+//                            sendMessage(MSG_FONT_DOWNLOAD_SUCCESS, null);
+//                        } else {
+//                            fontFile.delete();
+//                            sendMessage(MSG_HIDE_LOADING, null);
+//                            sendMessage(MSG_RESPONSE_MSG, "文件下载失败");
+//                        }
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                        fontFile.delete();
+//                        sendMessage(MSG_HIDE_LOADING, null);
+//                        sendMessage(MSG_RESPONSE_MSG, "文件下载异常");
+//                    } finally {
+//                        if (null != responseBody) {
+//                            responseBody.close();
+//                        }
+//                        if (bis != null) {
+//                            bis.close();
+//                        }
+//                        if (fos != null) {
+//                            fos.close();
+//                        }
+//                    }
+//                }
+//            });
+//        }else{
+//            simsunTypeface = Typeface.createFromFile(fontFile);
+//            intoTextInputMode();
+//        }
+    }
+
+    private void intoTextInputMode(){
+        textInputFlag = true;
+        showMessageBar("请点击屏幕，选择输入文字的位置");
+        btnTextInput.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_close), null, null);
+        btnTextInput.setText("退出批注");
+        actionsMenu.removeAllViews();
+        actionsMenu.addView(btnTextInput);
+        actionsMenu.addView(btnSave);
+
+        arrowLeft.setVisibility(View.INVISIBLE);
+        arrowRight.setVisibility(View.INVISIBLE);
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+        layoutParams.gravity = Gravity.CENTER;
+        actionsMenu.setLayoutParams(layoutParams);
     }
 
     /**
@@ -513,6 +629,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         textInputFlag = false;
         btnTextInput.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_text), null, null);
         btnTextInput.setText("文 字");
+        if(textView!=null){
+            pdfView.removeView(textView);
+            textView=null;
+        }
         hideMessageBar();
         addActionBtns();
     }
@@ -635,30 +755,19 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         //文字批注模式
         if(textInputFlag) {
 
+            if(textView!=null){
+                return false;
+            }
+
             //判断该位置是否可以新增文字批注
             if(e.getX()<FontTextView.borderPadding||e.getY()<FontTextView.borderPadding||e.getX()+FontTextView.viewMaxWidth>screenWidth||e.getY()+FontTextView.viewMaxHeight>screenHeight){
                 Toast.makeText(SignPdfView.this,"请点击其它位置",Toast.LENGTH_SHORT).show();
                 return false;
             }
 
-            textView = new FontTextView(SignPdfView.this);
-            textView.setX(e.getX());
-            textView.setY(e.getY());
-            pdfView.addView(textView);
-            textView.setOnTextClickListener(new FontTextView.OnTextClickListener() {
-                @Override
-                public void onTextEdit(CommentData commentData) {
-                    textInputDlg.showFragmentDlg(commentData.getTxtContent(),getSupportFragmentManager(),"textInputDlg");
-                }
-
-                @Override
-                public void onTextDelete(CommentData commentData) {
-                    //todo
-                    pdfView.removeView(textView);
-                    textView=null;
-                }
-            });
-            textInputDlg.showFragmentDlg(null,getSupportFragmentManager(),"textInputDlg");
+            txtX = e.getX();
+            txtY = e.getY();
+            textInputDlg.showFragmentDlg("",getSupportFragmentManager(),"textInputDlg");
 
             return true;
         }
@@ -1003,7 +1112,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if(!file.getParentFile().exists()){
             file.getParentFile().mkdirs();
         }
-        OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).build();
+        OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).build();
         Request request = new Request.Builder().url(serverUrl +URL_DOWNLOAD_FILE+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME,serverToken).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
@@ -1148,6 +1257,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             progressDialog.show();
         }
     }
+    private void changeProgressMsgDialog(String msg){
+        if(progressDialog!=null){
+            progressDialog.setMessage(msg);
+        }
+    }
     private void hideProgressDialog(){
         if(progressDialog!=null){
             progressDialog.hide();
@@ -1187,6 +1301,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         pdfView.invalidate();
         drawPenView.clearView();
         Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
+
+        if(textInputFlag){
+            exitTextInputMode();
+        }
     }
 
     /**
@@ -1264,6 +1382,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                         signPdfView.showProgressDialog(dataObj.toString());
                     }
                     break;
+                case MSG_CHANGE_LOADING:
+                    if(dataObj!=null) {
+                        signPdfView.changeProgressMsgDialog(dataObj.toString());
+                    }
+                    break;
                 case MSG_REFRESH_PDF_VIEW:
                     signPdfView.refreshPdfView();
                     break;
@@ -1283,6 +1406,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     break;
                 case MSG_SAVE_COMMENT_AND_SUBMIT:
                     signPdfView.submitDocAndBack();
+                    break;
+                case MSG_FONT_DOWNLOAD_SUCCESS:
+                    signPdfView.hideProgressDialog();
+                    signPdfView.intoTextInputMode();
                     break;
                 default:
             }
