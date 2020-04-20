@@ -16,6 +16,13 @@
               android:id="@+id/et_text_input"
     />
 
+    <Button
+            android:id="@+id/txt_btn_append"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:text="添加姓名和日期" />
+
     <LinearLayout
         android:weightSum="2"
         android:layout_width="match_parent"

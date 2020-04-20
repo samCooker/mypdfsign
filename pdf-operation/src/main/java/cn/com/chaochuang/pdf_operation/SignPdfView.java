@@ -380,8 +380,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                             commentData.setSignY(pdfView.getTextSignY(commentData.getSignY()));
                         }else if(drawPenView.getHasDraw()){
                             commentData = getSignBitmapFromSignView();
-                        }else{
-                            sendMessage(MSG_SHOW_CONFIRM_DLG,"没有需要保存的内容");
                         }
 
                         if (commentData != null && commentData.getImageBitmap() != null) {
@@ -466,7 +464,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
         //endregion
 
-
         //region 文字批注
         btnTextInput = getMenuButton(getResources().getDrawable(R.drawable.ic_text), "文 字");
         btnTextInput.setOnClickListener(new View.OnClickListener() {
@@ -499,7 +496,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                         public void onTextEdit(CommentData commentData) {
                             pdfView.removeView(textView);
                             textView.setEditMode(true);
-                            textInputDlg.showFragmentDlg(commentData.getTxtContent(),getSupportFragmentManager(),"textInputDlg");
+                            textInputDlg.showFragmentDlg(commentData.getTxtContent(),userName,getSupportFragmentManager(),"textInputDlg");
                         }
 
                         @Override
@@ -525,85 +522,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             }
         });
         //endregion
-    }
-
-    /**
-     * 下载字体文件
-     */
-    private void downloadFontFile(){
-//        File fontFolder = new File(Environment.getExternalStorageDirectory(),"Fonts");
-//        if(!fontFolder.exists()){
-//            fontFolder.mkdirs();
-//        }
-//        final File fontFile = new File(fontFolder,"kaiti.ttf");
-//        if(!fontFile.exists()) {
-//            sendMessage(MSG_SHOW_LOADING, "正在下载文件");
-//            OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).build();
-//            Request request = new Request.Builder().url(serverUrl + URL_DOWNLOAD_FONT_FILE).header(Constants.HEADER_TOKEN_NAME, serverToken).build();
-//            httpClient.newCall(request).enqueue(new Callback() {
-//                @Override
-//                public void onFailure(Call call, IOException e) {
-//                    fontFile.delete();
-//                    sendMessage(MSG_RESPONSE_MSG, "文件下载失败，请尝试重新打开");
-//                }
-//
-//                @Override
-//                public void onResponse(Call call, Response response) throws IOException {
-//                    ResponseBody responseBody = null;
-//                    BufferedInputStream bis = null;
-//                    FileOutputStream fos = null;
-//                    try {
-//                        if (call.isCanceled()) {
-//                            sendMessage(MSG_HIDE_LOADING, null);
-//                            sendMessage(MSG_RESPONSE_MSG, "已取消文件下载");
-//                            return;
-//                        }
-//                        if (response.isSuccessful()) {
-//                            responseBody = response.body();
-//                            long total = responseBody.contentLength();
-//                            bis = new BufferedInputStream(responseBody.byteStream());
-//                            fos = new FileOutputStream(fontFile);
-//                            byte[] bytes = new byte[1024 * 8];
-//                            int len;
-//                            long current = 0;
-//                            while ((len = bis.read(bytes)) != -1) {
-//                                fos.write(bytes, 0, len);
-//                                fos.flush();
-//                                current += len;
-//                                //计算进度
-//                                int progress = (int) (100 * current / total);
-//                                Log.d(TAG, "下载进度：" + progress);
-//                                sendMessage(MSG_CHANGE_LOADING,"正在下载字体文件（已完成：" + progress + "%）");
-//                            }
-//                            simsunTypeface = Typeface.createFromFile(fontFile);
-//                            sendMessage(MSG_FONT_DOWNLOAD_SUCCESS, null);
-//                        } else {
-//                            fontFile.delete();
-//                            sendMessage(MSG_HIDE_LOADING, null);
-//                            sendMessage(MSG_RESPONSE_MSG, "文件下载失败");
-//                        }
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                        fontFile.delete();
-//                        sendMessage(MSG_HIDE_LOADING, null);
-//                        sendMessage(MSG_RESPONSE_MSG, "文件下载异常");
-//                    } finally {
-//                        if (null != responseBody) {
-//                            responseBody.close();
-//                        }
-//                        if (bis != null) {
-//                            bis.close();
-//                        }
-//                        if (fos != null) {
-//                            fos.close();
-//                        }
-//                    }
-//                }
-//            });
-//        }else{
-//            simsunTypeface = Typeface.createFromFile(fontFile);
-//            intoTextInputMode();
-//        }
     }
 
     private void intoTextInputMode(){
@@ -767,7 +685,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
             txtX = e.getX();
             txtY = e.getY();
-            textInputDlg.showFragmentDlg("",getSupportFragmentManager(),"textInputDlg");
+            textInputDlg.showFragmentDlg("",userName,getSupportFragmentManager(),"textInputDlg");
 
             return true;
         }

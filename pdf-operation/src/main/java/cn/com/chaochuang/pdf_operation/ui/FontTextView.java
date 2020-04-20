@@ -100,7 +100,6 @@ public class FontTextView extends AppCompatTextView {
         this.context = context;
 
         setMaxWidth(viewMaxWidth);
-        setMaxHeight(viewMaxHeight);
 
         //边框画笔
         this.borderPaint = new Paint();
@@ -148,6 +147,8 @@ public class FontTextView extends AppCompatTextView {
         ViewGroup view = (ViewGroup) getParent();
         screenMaxWidth = view.getWidth();
         screenMaxHeight = view.getHeight();
+
+        setMaxWidth((int)(screenMaxWidth-getX()));
     }
 
     @Override

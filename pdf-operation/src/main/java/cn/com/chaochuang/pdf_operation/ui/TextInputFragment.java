@@ -1,25 +1,25 @@
 package cn.com.chaochuang.pdf_operation.ui;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
-import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import java.util.Date;
+
 import cn.com.chaochuang.pdf_operation.R;
 import cn.com.chaochuang.pdf_operation.ui.listener.OnClickItemListener;
+import cn.com.chaochuang.pdf_operation.utils.Constants;
 
 /**
  * 2020-4-14
@@ -32,8 +32,9 @@ public class TextInputFragment extends DialogFragment {
     private Context context;
     private View inputView;
     private EditText editText;
-    private String text;
+    private String text,userName;
     private Button cancelButton,okButton;
+    private Button appendButton;
     private OnClickItemListener onClickItemListener;
 
     private int maxWidth=1000;
@@ -104,6 +105,17 @@ public class TextInputFragment extends DialogFragment {
             }
         });
 
+        appendButton = inputView.findViewById(R.id.txt_btn_append);
+        appendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String append = editText.getText().toString() + "  " + userName + " " + Constants.DATA_FORMAT1.format(new Date());
+                editText.setText(append);
+                editText.setSelection(append.length());
+            }
+        });
+
+
         editText.setText(this.text);
         if(this.text!=null) {
             editText.setSelection(this.text.length());
@@ -115,8 +127,9 @@ public class TextInputFragment extends DialogFragment {
         inputManager.showSoftInput(editText, 0);
     }
 
-    public void showFragmentDlg(String txt,android.support.v4.app.FragmentManager fragmentManager, String tag){
+    public void showFragmentDlg(String txt,String userName,android.support.v4.app.FragmentManager fragmentManager, String tag){
         this.text=txt;
+        this.userName=userName;
         this.show(fragmentManager,tag);
     }
 
