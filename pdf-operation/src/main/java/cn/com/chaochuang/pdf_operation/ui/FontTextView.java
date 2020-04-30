@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.support.v4.content.ContextCompat;
@@ -15,15 +14,13 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
-import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
-import java.io.File;
+import java.util.Date;
 
 import cn.com.chaochuang.pdf_operation.R;
-import cn.com.chaochuang.pdf_operation.SignPdfView;
 import cn.com.chaochuang.pdf_operation.model.TouchPos;
-import cn.com.chaochuang.pdf_operation.utils.DensityUtil;
+import cn.com.chaochuang.pdf_operation.utils.Constants;
 import cn.com.chaochuang.writingpen.model.CommentData;
 
 
@@ -35,12 +32,16 @@ public class FontTextView extends AppCompatTextView {
     /**
      * 初始的最大高度和宽度
      */
-    public static int viewMaxWidth=400,viewMaxHeight=400;
-    private float screenMaxWidth,screenMaxHeight;
+    private float viewMaxWidth, viewMaxHeight;
     /**
      * 边框留白大小
      */
     public static int borderPadding = 80;
+    /**
+     *  右下角人员和日期宽高
+     * */
+    private float signNameWidth = 360;
+    private float signNameHeight = 30;
     /**
      * 矩形边角图标圆形大小
      */
@@ -54,6 +55,7 @@ public class FontTextView extends AppCompatTextView {
     private int chopSize = borderPadding-txtBitmapPadding;
 
     private CommentData commentData;
+    private String userNameSign;
     private Context context;
     private float downX, downY, originLeft, originTop, originRight, originBottom;
     /**
@@ -61,7 +63,7 @@ public class FontTextView extends AppCompatTextView {
      */
     private Paint borderPaint;
     private Paint drawPaint;
-    private Bitmap moveBitmap,expendBitmap,deleteBitmap;
+    private Bitmap expendBitmap,editBitmap;
     /**
      * 第一个接触点位置标示
      */
@@ -72,7 +74,7 @@ public class FontTextView extends AppCompatTextView {
      */
     private float viewTouchPadding = borderPadding;
 
-    private int viewMinWidth = borderPadding*2, viewMinHeight = borderPadding*2;
+    private float viewMinWidth = borderPadding*2+signNameWidth, viewMinHeight = borderPadding*2+signNameHeight;
     /**
      * 圆形边框宽度
      */
@@ -99,7 +101,7 @@ public class FontTextView extends AppCompatTextView {
     private void initTextView(Context context) {
         this.context = context;
 
-        setMaxWidth(viewMaxWidth);
+        setMaxWidth((int) viewMaxWidth);
 
         //边框画笔
         this.borderPaint = new Paint();
@@ -109,12 +111,13 @@ public class FontTextView extends AppCompatTextView {
         this.borderPaint.setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
 
         //图形
-        moveBitmap = getBitmapFromVectorDrawable(R.drawable.edit_move);
         expendBitmap = getBitmapFromVectorDrawable(R.drawable.edit_expend);
-        deleteBitmap = getBitmapFromVectorDrawable(R.drawable.edit_delete);
+        //editBitmap = getBitmapFromVectorDrawable(R.drawable.ic_text);
         drawPaint = new Paint();
 
         setPadding(borderPadding,borderPadding,borderPadding,borderPadding);
+
+        setLineSpacing(getLineSpacingExtra(),1.5f);
 
         //数据实体
         commentData = new CommentData();
@@ -143,12 +146,6 @@ public class FontTextView extends AppCompatTextView {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
-        ViewGroup view = (ViewGroup) getParent();
-        screenMaxWidth = view.getWidth();
-        screenMaxHeight = view.getHeight();
-
-        setMaxWidth((int)(screenMaxWidth-getX()));
     }
 
     @Override
@@ -167,21 +164,6 @@ public class FontTextView extends AppCompatTextView {
                 Log.d("touchPos", touchPos + "");
                 break;
             case MotionEvent.ACTION_UP:
-                switch (touchPos){
-                    case TouchPos.POS_CENTER:
-                    case TouchPos.POS_TOP:
-                    case TouchPos.POS_BOTTOM:
-                        //编辑
-                        if (onTextClickListener != null) {
-                            onTextClickListener.onTextEdit(commentData);
-                        }
-                        break;
-                    case TouchPos.POS_TOP_LEFT:
-                        //删除
-                        if(onTextClickListener!=null){
-                            onTextClickListener.onTextDelete(commentData);
-                        }
-                }
                 break;
             case MotionEvent.ACTION_MOVE:
                 //
@@ -189,14 +171,13 @@ public class FontTextView extends AppCompatTextView {
                 float moveY = event.getY() - downY;
                 if (Math.abs(moveX) > 3 || Math.abs(moveY) > 3) {
                     switch (touchPos) {
-                        //点击中心移动
-                        case TouchPos.POS_TOP_RIGHT:
-                            moveView(moveX,moveY);
-                            break;
                         //点击右下角放大缩小
                         case TouchPos.POS_BOTTOM_RIGHT:
+                        case TouchPos.POS_RIGHT:
                             extendView(moveX, moveY);
                             break;
+                        default:
+                            moveView(moveX,moveY);
                     }
                 }
                 break;
@@ -204,12 +185,56 @@ public class FontTextView extends AppCompatTextView {
         return true;
     }
 
-    @Override
-    public void setText(CharSequence text, BufferType type) {
-        super.setText(text, type);
-        if(commentData!=null&&text!=null){
-            commentData.setTxtContent(text.toString());
+    public void setViewMaxWidth(float viewMaxWidth) {
+        this.viewMaxWidth = viewMaxWidth;
+    }
+
+    public void setViewMaxHeight(float viewMaxHeight) {
+        this.viewMaxHeight = viewMaxHeight;
+    }
+
+    public float getViewMaxWidth() {
+        return viewMaxWidth;
+    }
+
+    public float getViewMaxHeight() {
+        return viewMaxHeight;
+    }
+
+    public void setTextAndUserName(String text, String userName) {
+        commentData.setTextContent(text);
+        commentData.setSignTime(new Date());
+        userNameSign = userName + " " + Constants.DATA_FORMAT1.format(commentData.getSignTime());
+        //末尾加上回车
+        if(text!=null) {
+            text += "\n";
         }
+        setText(text);
+
+        //计算用户名称和日期宽度
+        signNameWidth = getPaint().measureText(userNameSign);
+        viewMinWidth = borderPadding*2+signNameWidth;
+        viewMinHeight = borderPadding*2+signNameHeight;
+
+        //防止最上边超出屏幕
+        if(getX()<chopSize){
+            setX(chopSize);
+        }
+        if(getY()<chopSize){
+            setY(chopSize);
+        }
+        float _maxW = viewMaxWidth -getX();
+        //防止最右边超出屏幕
+        if(_maxW<viewMinWidth){
+            setX(getX()-(viewMinWidth-_maxW));
+        }
+        //防止最下边超出屏幕
+        if(viewMaxHeight-getY()<chopSize){
+            setY(viewMaxHeight-chopSize);
+        }
+
+        setMaxWidth((int) _maxW);
+        setMinWidth((int) viewMinWidth);
     }
 
     /**
@@ -223,10 +248,10 @@ public class FontTextView extends AppCompatTextView {
         float x = getX() + moveX;
         float y = getY() + moveY;
         //判断是否超出屏幕
-        if(x>0&&x<screenMaxWidth-originRight-originLeft) {
+        if(x>-chopSize&&x< viewMaxWidth -(originRight-originLeft)) {
             setX(x);
         }
-        if(y>0&&y<screenMaxHeight-originBottom-originTop){
+        if(y>0&&y< viewMaxHeight -(originBottom-originTop)){
             setY(y);
         }
     }
@@ -243,13 +268,13 @@ public class FontTextView extends AppCompatTextView {
         float width = originRight-originLeft + ex, height = originBottom-originTop + ey;
         if (width < viewMinWidth) {
             width = viewMinWidth;
-        }else if(width>screenMaxWidth-getX()){
-            width= screenMaxWidth-getX();
+        }else if(width> viewMaxWidth -getX()){
+            width= viewMaxWidth -getX();
         }
         if (height < viewMinHeight) {
             height = viewMinHeight;
-        }else if(height>screenMaxHeight-getY()){
-            height = screenMaxHeight-getY();
+        }else if(height> viewMaxHeight -getY()){
+            height = viewMaxHeight -getY();
         }
         setLayoutParams(new RelativeLayout.LayoutParams((int)width, (int)height));
     }
@@ -299,21 +324,34 @@ public class FontTextView extends AppCompatTextView {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        float right = getRight() - circleSize;
+        float bottom = getBottom() - circleSize;
         if(drawBorder) {
             float left = getLeft() + circleSize;
             float top = getTop() + circleSize;
-            float right = getRight() - circleSize;
-            float bottom = getBottom() - circleSize;
             //边框
             canvas.drawRect(left, top, right, bottom, borderPaint);
-            //删除图标
-            drawBorderCorner(left, top, canvas, deleteBitmap);
-            //移动图标
-            drawBorderCorner(right, top, canvas, moveBitmap);
+            //drawBorderCorner(right, top, canvas, editBitmap);
             //拉伸图标
             drawBorderCorner(right, bottom, canvas, expendBitmap);
         }
+        //右下角签名和日期
+        drawSignName(right, bottom, canvas);
 
+    }
+
+    /**
+     * 右下角签名和日期
+     */
+    private void drawSignName(float x,float y, Canvas canvas){
+        if(this.userNameSign!=null&&this.userNameSign.length()>0){
+            canvas.save();
+            float txtX = x - (circleSize-txtBitmapPadding) - signNameWidth;
+            float txtY = y - circleSize;
+            canvas.translate(txtX,txtY);
+            canvas.drawText(userNameSign,0,0,getPaint());
+            canvas.restore();
+        }
     }
 
     /**
@@ -415,7 +453,7 @@ public class FontTextView extends AppCompatTextView {
      */
     public CommentData getSaveDate(){
 
-        if(getText()==null||getText().length()==0){
+        if(commentData.getTextContent()==null||commentData.getTextContent().length()==0){
             return null;
         }
         commentData.setSignX(getX()+chopSize);

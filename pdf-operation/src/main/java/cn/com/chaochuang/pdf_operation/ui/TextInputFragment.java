@@ -34,7 +34,6 @@ public class TextInputFragment extends DialogFragment {
     private EditText editText;
     private String text,userName;
     private Button cancelButton,okButton;
-    private Button appendButton;
     private OnClickItemListener onClickItemListener;
 
     private int maxWidth=1000;
@@ -104,17 +103,6 @@ public class TextInputFragment extends DialogFragment {
                 dismiss();
             }
         });
-
-        appendButton = inputView.findViewById(R.id.txt_btn_append);
-        appendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String append = editText.getText().toString() + "  " + userName + " " + Constants.DATA_FORMAT1.format(new Date());
-                editText.setText(append);
-                editText.setSelection(append.length());
-            }
-        });
-
 
         editText.setText(this.text);
         if(this.text!=null) {

@@ -13,62 +13,82 @@ import java.util.Date;
  */
 public class CommentData {
 
+    /**
+     * 签批类型
+     */
     public static final String TYPE_HANDWRITING = "0";
+    public static final String TYPE_TEXT = "1";
 
     private String id;
+    /**
+     * 页号
+     */
     private int pageNo;
     /**
      * 图片相对左上角的坐标
      */
     private float px;
     private float py;
-
     /**
      * pdf文件的物理高度（用于计算相对pdf文件的Y坐标）
      */
     private float pdfFileHeight;
     private float pdfFileWidth;
-
+    /**
+     * 放大缩小倍数
+     */
     private float zoom;
-
+    /**
+     *
+     */
     private String fileId;
+    /**
+     * 签批用户ID
+     */
     private String signerId;
+    /**
+     * 签批用户姓名
+     */
     private String signerName;
+    /**
+     * 签批时间
+     */
     private Date signTime;
-
     /**
      * 图片的真实高度和宽度
      */
     private float imageWidth;
     private float imageHeight;
-
+    /**
+     * 签批类型（手写:0、文字:1）
+     */
     private String signType;
     /**
-     * 图片base64和bitmap
+     * 签批图片base64编码
      */
     private String signContent;
+    /**
+     * 文字内容
+     */
+    private String textContent;
+    /**
+     * 签批图片bitmap(不作为服务端保存的参数)
+     */
     private Bitmap imageBitmap;
-
     /**
      * 屏幕上图片的原坐标
      */
     private float signX;
     private float signY;
-
-    /**
-     * 文字内容
-     */
-    private String txtContent;
-
-    //TODO 暂时无用
-    private Rect srcRect;
-    private RectF targetRect;
-
     /**
      * 公文相关
      */
     private String flowInstId;
     private String nodeInstId;
+    /**
+     * 是否生成签批的pdf
+     */
+    private Boolean newSignPdf;
 
     public String getId() {
         return id;
@@ -198,22 +218,6 @@ public class CommentData {
         this.signY = signY;
     }
 
-    public Rect getSrcRect() {
-        return srcRect;
-    }
-
-    public void setSrcRect(Rect srcRect) {
-        this.srcRect = srcRect;
-    }
-
-    public RectF getTargetRect() {
-        return targetRect;
-    }
-
-    public void setTargetRect(RectF targetRect) {
-        this.targetRect = targetRect;
-    }
-
     public String getSignType() {
         return signType;
     }
@@ -246,11 +250,19 @@ public class CommentData {
         this.zoom = zoom;
     }
 
-    public String getTxtContent() {
-        return txtContent;
+    public String getTextContent() {
+        return textContent;
     }
 
-    public void setTxtContent(String txtContent) {
-        this.txtContent = txtContent;
+    public void setTextContent(String textContent) {
+        this.textContent = textContent;
+    }
+
+    public Boolean getNewSignPdf() {
+        return newSignPdf;
+    }
+
+    public void setNewSignPdf(Boolean newSignPdf) {
+        this.newSignPdf = newSignPdf;
     }
 }

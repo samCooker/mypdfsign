@@ -11,10 +11,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -41,7 +39,6 @@ public class OkHttpUtil {
     private String serverToken;
 
     private List<CommentData> handwritingList;
-    private List<CommentData> textDataList;
 
     public OkHttpUtil(boolean encodeFlag,String token){
         this.isEncoding = encodeFlag;
@@ -117,24 +114,25 @@ public class OkHttpUtil {
     public void setHandwritingList(List<CommentData> commentDataList){
         if(commentDataList!=null){
             for (CommentData commentData:commentDataList){
-                if(CommentData.TYPE_HANDWRITING.equals(commentData.getSignType())){
-                    if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
-                        Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
-                        commentData.setImageBitmap(bitmap);
-                    }
+                if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
+                    Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
+                    commentData.setImageBitmap(bitmap);
                 }
             }
+        }else{
+            commentDataList = new ArrayList<>();
         }
         this.handwritingList = commentDataList;
     }
 
     public void addHandwriting(CommentData commentData){
-        if(commentData!=null&&this.handwritingList!=null){
-            if(CommentData.TYPE_HANDWRITING.equals(commentData.getSignType())){
-                if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
-                    Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
-                    commentData.setImageBitmap(bitmap);
-                }
+        if(this.handwritingList==null){
+            this.handwritingList = new ArrayList<>();
+        }
+        if(commentData!=null){
+            if(commentData.getImageBitmap()==null&&commentData.getSignContent()!=null&&!"".equals(commentData.getSignContent().trim())){
+                Bitmap bitmap = ImageTools.base64ToBitmap(commentData.getSignContent());
+                commentData.setImageBitmap(bitmap);
             }
             this.handwritingList.add(commentData);
         }
@@ -156,15 +154,6 @@ public class OkHttpUtil {
         return handwritingList;
     }
 
-    public List<CommentData> getTextDataList() {
-        return textDataList;
-    }
-
-    public void setTextDataList(List<CommentData> textDataList) {
-        this.textDataList = textDataList;
-    }
-
-
     /**
      * 获取文件的MD5码
      *
@@ -172,20 +161,30 @@ public class OkHttpUtil {
      * @return
      * @throws IOException
      */
-    public static String getFileMd5Code(File file) {
-        MessageDigest md = null;
+    public static String getFileMd5Code(File file){
+
+        if(file==null||!file.exists()){
+            return null;
+        }
+
+        MessageDigest md;
         FileInputStream in = null;
         try {
-            if(file.exists()) {
-                md = MessageDigest.getInstance("MD5");
-                in = new FileInputStream(file);
-                FileChannel ch = in.getChannel();
-                MappedByteBuffer byteBuffer = ch.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
-                md.update(byteBuffer);
-                return bufferToHex(md.digest());
+
+            md = MessageDigest.getInstance("MD5");
+            in = new FileInputStream(file);
+
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                md.update(buffer, 0, length);
             }
-        } catch (IOException | NoSuchAlgorithmException ex) {
-            ex.printStackTrace();
+
+            return bufferToHex(md.digest());
+        } catch (java.security.NoSuchAlgorithmException ex) {
+            throw new AssertionError(ex);
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
             if(in!=null){
                 try {
@@ -195,7 +194,7 @@ public class OkHttpUtil {
                 }
             }
         }
-        return "";
+        return null;
     }
 
     /**
