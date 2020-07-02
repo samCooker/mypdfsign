@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
+import cn.com.chaochuang.pdf_operation.model.EntryData;
 import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
 import cn.com.chaochuang.pdf_operation.ui.FontTextView;
@@ -137,7 +138,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private String userId;
     private String userName;
     private int currentPage=0;
-    private boolean newSignPdf=false;
+    private boolean updatePdfFlag =false;
     //隐藏文字批注
     private boolean hideTextBtn=false;
 
@@ -155,6 +156,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
     private boolean readMode = false;
     private boolean hideAnnot = false;
+
+    private List<EntryData> entryDataList;
 
     private AppCompatButton closeViewItem,jumpToItem;
     /**
@@ -494,7 +497,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 if(textView!=null) {
                     pdfView.removeView(textView);
                     textView.setEditMode(true);
-                    textInputDlg.showFragmentDlg(textView.getCommentData().getTextContent(), userName, getSupportFragmentManager(), "textInputDlg");
+                    textInputDlg.showFragmentDlg(textView.getCommentData().getTextContent(), userName, getSupportFragmentManager(), "textInputDlg",entryDataList);
                 }else{
                     Toast.makeText(SignPdfView.this, "请先选择输入文字的位置", Toast.LENGTH_LONG).show();
                 }
@@ -527,7 +530,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                         public void onTextEdit(CommentData commentData) {
                             pdfView.removeView(textView);
                             textView.setEditMode(true);
-                            textInputDlg.showFragmentDlg(textView.getCommentData().getTextContent(),userName,getSupportFragmentManager(),"textInputDlg");
+                            textInputDlg.showFragmentDlg(textView.getCommentData().getTextContent(),userName,getSupportFragmentManager(),"textInputDlg",entryDataList);
                         }
 
                         @Override
@@ -632,7 +635,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         }
         //点击保存时是否在服务端生成签批后的PDF文件（默认false）
         if (intent.hasExtra(Constants.KEY_UPDATE_PDF)){
-            newSignPdf = intent.getBooleanExtra(Constants.KEY_UPDATE_PDF,false);
+            updatePdfFlag = intent.getBooleanExtra(Constants.KEY_UPDATE_PDF,false);
         }
         //隐藏文字批注(默认false)
         if (intent.hasExtra(Constants.KEY_HIDE_TXT_BTN)){
@@ -661,6 +664,13 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         //是否隐藏批注(默认false)
         if (intent.hasExtra(KEY_IS_HIDE_ANNOT)) {
             hideAnnot = intent.getBooleanExtra(KEY_IS_HIDE_ANNOT,false);
+        }
+        //词条内容
+        if (intent.hasExtra(KEY_ENTRY_LIST)) {
+            String entryListJson = intent.getStringExtra(KEY_ENTRY_LIST);
+            if(entryListJson!=null&&!"".equals(entryListJson.trim())){
+                entryDataList = JSON.parseArray(entryListJson, EntryData.class);
+            }
         }
 
         //--公文相关--
@@ -725,7 +735,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
             txtX = e.getX();
             txtY = e.getY();
-            textInputDlg.showFragmentDlg("",userName,getSupportFragmentManager(),"textInputDlg");
+            textInputDlg.showFragmentDlg("",userName,getSupportFragmentManager(),"textInputDlg",entryDataList);
 
             return true;
         }
@@ -916,7 +926,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         saveBean.setFileId(fileId);
         saveBean.setFlowInstId(flowInstId);
         saveBean.setNodeInstId(nodeInstId);
-        saveBean.setNewSignPdf(newSignPdf);
+        saveBean.setUpdatePdfFlag(updatePdfFlag);
         saveBean.setPageNo(handwritingData.getPageNo());
         saveBean.setPx(handwritingData.getPx());
         saveBean.setPy(handwritingData.getPy());

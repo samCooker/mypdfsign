@@ -1,8 +1,6 @@
 package cn.com.chaochuang.writingpen.model;
 
 import android.graphics.Bitmap;
-import android.graphics.Rect;
-import android.graphics.RectF;
 
 import java.util.Date;
 
@@ -86,9 +84,9 @@ public class CommentData {
     private String flowInstId;
     private String nodeInstId;
     /**
-     * 是否生成签批的pdf
+     * 是否更新原pdf
      */
-    private Boolean newSignPdf;
+    private Boolean updatePdfFlag;
 
     public String getId() {
         return id;
@@ -258,11 +256,11 @@ public class CommentData {
         this.textContent = textContent;
     }
 
-    public Boolean getNewSignPdf() {
-        return newSignPdf;
+    public Boolean getUpdatePdfFlag() {
+        return updatePdfFlag;
     }
 
-    public void setNewSignPdf(Boolean newSignPdf) {
-        this.newSignPdf = newSignPdf;
+    public void setUpdatePdfFlag(Boolean updatePdfFlag) {
+        this.updatePdfFlag = updatePdfFlag;
     }
 }

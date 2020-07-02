@@ -36,6 +36,8 @@ public class Constants {
     //是否隐藏批注(默认false)
     public static final String KEY_IS_HIDE_ANNOT = "hideAnnot";
 
+    public static final String KEY_ENTRY_LIST = "entryList";
+
     //--公文手写签批相关--
     public static final String KEY_FLOW_INST_ID = "flowInstId";
     public static final String KEY_NODE_INST_ID = "nodeInstId";
