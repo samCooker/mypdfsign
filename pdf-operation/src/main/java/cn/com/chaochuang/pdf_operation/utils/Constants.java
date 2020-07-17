@@ -41,6 +41,8 @@ public class Constants {
     //--公文手写签批相关--
     public static final String KEY_FLOW_INST_ID = "flowInstId";
     public static final String KEY_NODE_INST_ID = "nodeInstId";
+    //把多个PDF合成，再打开合成的PDF
+    public static final String KEY_MULTI_TO_ONE = "multiToOne";
 
     //--会议同步相关--
     public static final String KEY_WEB_SOCKET_URL = "webSocketUrl";
@@ -54,7 +56,10 @@ public class Constants {
     public static final String URL_HANDWRITING_DELETE = "comment/delete.mo";
     public static final String URL_SAVE_PDF = "comment/savetopdf.mo";
     public static final String URL_GET_MD5 = "comment/getmdf.mo";
+    //获取合成的pdf的md5值
+    public static final String URL_GET_ME_MD5 = "comment/getmemdf.mo";
     public static final String URL_DOWNLOAD_FILE = "comment/download.mo";
+    public static final String URL_DOWNLOAD_ME_FILE = "comment/downloadme.mo";
 
     //-- handler 状态码 --
     public static final int MSG_TOAST = 0;

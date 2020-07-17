@@ -23,7 +23,7 @@ public class CommentData {
      */
     private int pageNo;
     /**
-     * 图片相对左上角的坐标
+     * 图片相对每一页左上角的坐标
      */
     private float px;
     private float py;

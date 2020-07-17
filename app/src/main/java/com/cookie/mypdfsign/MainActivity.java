@@ -15,16 +15,19 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         Intent intent = new Intent(this,SignPdfView.class);
         intent.putExtra(Constants.PARAM_USER_ID, "1");
-        intent.putExtra(Constants.PARAM_USER_NAME, "测试人员");
-        intent.putExtra(Constants.PARAM_FILE_ID, "40289fbc715e1aa901715e4de3840000");
-        intent.putExtra(Constants.KEY_SERVER_URL, "http://192.168.1.112:8089/pdf_handwriting/");
-        intent.putExtra(Constants.KEY_WEB_SOCKET_URL, "ws://192.168.1.112:8089/pdf_handwriting/meeting/ws/");
+        intent.putExtra(Constants.PARAM_USER_NAME, "测试人员测试人员");
+        intent.putExtra(Constants.PARAM_FILE_ID, "40289fbc7356428e01735653abda0000");
+        intent.putExtra(Constants.KEY_MULTI_TO_ONE, true);
+        intent.putExtra(Constants.KEY_SERVER_URL, "http://192.168.31.60:8089/pdf_handwriting/");
+        intent.putExtra(Constants.KEY_WEB_SOCKET_URL, "ws://192.168.31.60:8089/pdf_handwriting/meeting/ws/");
 //        intent.putExtra(Constants.KEY_MEETING_REOCRD_ID, "1");
         intent.putExtra(Constants.KEY_IS_HOST, true);
         intent.putExtra(Constants.KEY_IS_DOC_MODE, true);
-        intent.putExtra(Constants.KEY_PEN_ONLY, false);
-        intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU4NzM4NDQ2OX0.kRcBe1uUI7Qiv7Od3U_TkMyOlGF5COPAp-NgCI5T7xk");
+        intent.putExtra(Constants.KEY_IS_HIDE_ANNOT, false);
+        intent.putExtra(Constants.KEY_UPDATE_PDF, false);
+        intent.putExtra(Constants.KEY_CURRENT_PAGE, 0);
+        intent.putExtra(Constants.KEY_ENTRY_LIST, "[{\"id\":33,\"userId\":2073,\"word\":\"同意\"},{\"id\":35,\"userId\":2073,\"word\":\"已阅\"},{\"id\":36,\"userId\":2073,\"word\":\"知道了，呈上级阅示。\"},{\"id\":37,\"userId\":2073,\"word\":\"这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条这是一个很长的词条\"}]");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiJhZG1pbiIsImV4cCI6MTU5NTA1NDgxOH0.vxZBkH92_iqjWOqv1wZ77gpvLtTeUDN_Wjw62axccLo");
         startActivityForResult(intent,1001);
 
     }
