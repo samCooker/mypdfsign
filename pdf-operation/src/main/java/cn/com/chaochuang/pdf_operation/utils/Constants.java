@@ -60,6 +60,9 @@ public class Constants {
     public static final String URL_GET_ME_MD5 = "comment/getmemdf.mo";
     public static final String URL_DOWNLOAD_FILE = "comment/download.mo";
     public static final String URL_DOWNLOAD_ME_FILE = "comment/downloadme.mo";
+    public static final String URL_FIND_MEETING_MEMBERS ="meeting/members.mo";
+    public static final String URL_FIND_MEETING_HANDWRITING ="meeting/hwlist.mo";
+
 
     //-- handler 状态码 --
     public static final int MSG_TOAST = 0;

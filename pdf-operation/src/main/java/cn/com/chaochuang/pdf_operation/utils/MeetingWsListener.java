@@ -39,6 +39,7 @@ public class MeetingWsListener extends WebSocketListener {
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
         super.onFailure(webSocket, t, response);
+        t.printStackTrace();
         Log.e(TAG,"同步出现了错误:"+t.getMessage());
     }
 

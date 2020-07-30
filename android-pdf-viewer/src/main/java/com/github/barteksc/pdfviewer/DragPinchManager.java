@@ -86,6 +86,11 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
     }
 
     private boolean checkLinkTapped(float x, float y) {
+
+        if (pdfView.isNotChangePage()){
+            return false;
+        }
+
         PdfFile pdfFile = pdfView.pdfFile;
         if (pdfFile == null) {
             return false;
@@ -116,6 +121,10 @@ class DragPinchManager implements GestureDetector.OnGestureListener, GestureDete
 
     private void startPageFling(MotionEvent downEvent, MotionEvent ev, float velocityX, float velocityY) {
         if (!checkDoPageFling(velocityX, velocityY)) {
+            return;
+        }
+
+        if (pdfView.isNotChangePage()){
             return;
         }
 

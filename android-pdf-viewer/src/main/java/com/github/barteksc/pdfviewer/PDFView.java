@@ -195,6 +195,9 @@ public class PDFView extends RelativeLayout {
 
     private boolean isScrollHandleInit = false;
 
+    //是否禁止翻页
+    private boolean notChangePage = false;
+
     ScrollHandle getScrollHandle() {
         return scrollHandle;
     }
@@ -321,6 +324,7 @@ public class PDFView extends RelativeLayout {
         // Check the page number and makes the
         // difference between UserPages and DocumentPages
         pageNb = pdfFile.determineValidPageNumberFrom(pageNb);
+
         currentPage = pageNb;
 
         loadPages();
@@ -1658,5 +1662,15 @@ public class PDFView extends RelativeLayout {
 
         layoutParams.addRule(CENTER_IN_PARENT);
         return layoutParams;
+    }
+
+
+
+    public boolean isNotChangePage() {
+        return notChangePage;
+    }
+
+    public void setNotChangePage(boolean notChangePage) {
+        this.notChangePage = notChangePage;
     }
 }

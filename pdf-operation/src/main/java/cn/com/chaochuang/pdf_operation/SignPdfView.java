@@ -68,10 +68,14 @@ import java.util.concurrent.TimeUnit;
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
 import cn.com.chaochuang.pdf_operation.model.CommentFile;
 import cn.com.chaochuang.pdf_operation.model.EntryData;
+import cn.com.chaochuang.pdf_operation.model.MeetingMemberAdaptor;
+import cn.com.chaochuang.pdf_operation.model.MeetingMemberData;
 import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
+import cn.com.chaochuang.pdf_operation.model.WebSocketMessage;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
 import cn.com.chaochuang.pdf_operation.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
+import cn.com.chaochuang.pdf_operation.ui.MeetingMemberFragment;
 import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
 import cn.com.chaochuang.pdf_operation.ui.TextInputFragment;
 import cn.com.chaochuang.pdf_operation.ui.actionsheet.ActionSheet;
@@ -79,6 +83,7 @@ import cn.com.chaochuang.pdf_operation.ui.actionsheet.OnActionListener;
 import cn.com.chaochuang.pdf_operation.ui.listener.OnClickItemListener;
 import cn.com.chaochuang.pdf_operation.utils.Constants;
 import cn.com.chaochuang.pdf_operation.utils.ImageTools;
+import cn.com.chaochuang.pdf_operation.utils.MeetingWsListener;
 import cn.com.chaochuang.pdf_operation.utils.OkHttpUtil;
 import cn.com.chaochuang.writingpen.model.CommentData;
 import cn.com.chaochuang.writingpen.model.SignBitmapData;
@@ -194,6 +199,15 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private int screenWidth;
     private int screenHeight;
 
+    /**
+     * 会议相关
+     */
+    private MeetingWsListener meetingWsListener;
+    private String webSocketUrl;
+    private String meetingRecordId;
+    private Boolean isHost;
+    private AppCompatButton meetingMemItem;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -241,6 +255,24 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
         //顶部提示栏
         barTextView = findViewById(R.id.bar_msg_tv);
+
+        //会议同步
+        //会议同步websocket服务
+        if(meetingRecordId!=null&&!"".equals(meetingRecordId.trim())&&webSocketUrl!=null&&!"".equals(webSocketUrl.trim())) {
+            meetingWsListener = new MeetingWsListener();
+            meetingWsListener.startRunning(this, webSocketUrl + meetingRecordId + "?" + HEADER_TOKEN_NAME + "=" + serverToken);
+
+            if(isHost){
+                //是主持人,显示菜单按钮
+                initMenuBtn();
+            }else{
+                //与会人员
+                initMeetingBtn();
+                pdfView.setNotChangePage(true);
+            }
+        }else{
+            initMenuBtn();
+        }
 
         //dialog
         jumpToFragment = new JumpToFragment();
@@ -562,6 +594,60 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             }
         });
         //endregion
+
+        if(meetingWsListener!=null&&isHost){
+            meetingMemItem = getMenuButton(getResources().getDrawable(R.drawable.ic_people),"与会人员");
+            meetingMemItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    httpUtil.get(serverUrl + URL_FIND_MEETING_MEMBERS + "?recordId=" + meetingRecordId, new Callback() {
+                        @Override
+                        public void onFailure(Call call, IOException e) {
+                            sendMessage(MSG_RESPONSE_MSG,"请求错误");
+                        }
+
+                        @Override
+                        public void onResponse(Call call, Response response) throws IOException {
+                            if(response.isSuccessful()&&response.body()!=null) {
+                                String data = response.body().string();
+                                AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                                if(AppResponse.RES_SUCCESS.equals(resData.getSuccess())&&resData.getData()!=null){
+                                    final List<MeetingMemberData> memberDataList = JSON.parseArray(resData.getData().toString(),MeetingMemberData.class);
+                                    SignPdfView.this.runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            MeetingMemberFragment fragment = new MeetingMemberFragment();
+                                            MeetingMemberAdaptor adaptor = new MeetingMemberAdaptor(getApplicationContext(),memberDataList);
+                                            fragment.showFragmentDlg(getSupportFragmentManager(),"meetingMemberList",adaptor);
+
+
+                                        }
+                                    });
+                                }else{
+                                    sendMessage(MSG_RESPONSE_MSG,"操作失败");
+                                }
+
+                            }else {
+                                sendMessage(MSG_RESPONSE_MSG,"操作失败");
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    /**
+     * 会议同步按钮（与会人员）
+     */
+    private void initMeetingBtn(){
+        closeViewItem = getMenuButton(getResources().getDrawable(R.drawable.ic_exit),"退出同步");
+        closeViewItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
     }
 
     private void intoTextInputMode(){
@@ -690,6 +776,17 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             multiToOne = intent.getBooleanExtra(KEY_MULTI_TO_ONE,false);
         }
 
+        //--会议相关
+        if (intent.hasExtra(Constants.KEY_WEB_SOCKET_URL)) {
+            webSocketUrl = intent.getStringExtra(Constants.KEY_WEB_SOCKET_URL);
+        }
+        if (intent.hasExtra(Constants.KEY_MEETING_REOCRD_ID)) {
+            meetingRecordId = intent.getStringExtra(Constants.KEY_MEETING_REOCRD_ID);
+        }
+        if (intent.hasExtra(Constants.KEY_MEETING_REOCRD_ID)) {
+            isHost = intent.getBooleanExtra(KEY_IS_HOST,false);
+        }
+
         modifyFlag=false;
     }
 
@@ -715,10 +812,18 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 .autoSpacing(true)
                 .onTap(this)
                 .onLongPress(this)
+                .enableSwipe(isHost||meetingRecordId==null||"".equals(meetingRecordId.trim()))
                 .onPageChange(new OnPageChangeListener() {
                     @Override
                     public void onPageChanged(int page, int pageCount) {
                         currentPage = page;
+                        if(meetingWsListener!=null&&isHost){
+                            WebSocketMessage webSocketMessage = new WebSocketMessage();
+                            webSocketMessage.setPageNo(page);
+                            webSocketMessage.setMessageType(WebSocketMessage.TYPE_PAGE_CHANGE);
+                            webSocketMessage.setRecordId(meetingRecordId);
+                            meetingWsListener.sendMessage(webSocketMessage);
+                        }
                     }
                 })
                 .onDraw(this)
@@ -1262,29 +1367,43 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private void addActionBtns(){
         actionsMenu.removeAllViews();
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
-        int menuCount = 1;
-        actionsMenu.addView(closeViewItem);
+        int menuCount = 0;
+
         if(btnSubmit!=null) {
             actionsMenu.addView(btnSubmit);
             menuCount++;
         }
 
         if(!readMode) {
+            if(meetingRecordId!=null&&!isHost){
+                //会议模式(与会人员)
+                actionsMenu.addView(closeViewItem);
+                menuCount++;
+            }else{
+                actionsMenu.addView(closeViewItem);
+                menuCount++;
 
-            if(!hideTextBtn) {
-                actionsMenu.addView(btnTextInput);
+                actionsMenu.addView(btnSave);
+                if(!hideTextBtn) {
+                    actionsMenu.addView(btnTextInput);
+                    menuCount+=1;
+                }
+                actionsMenu.addView(btnErase);
+//                if(meetingMemItem!=null&&meetingRecordId!=null){
+//                    //会议模式（主持人）
+//                    actionsMenu.addView(meetingMemItem);
+//                    menuCount+=1;
+//                }
+                actionsMenu.addView(btnPen);
+                menuCount+=3;
+
+                if(pdfView!=null&&pdfView.getPageCount()>5) {
+                    actionsMenu.addView(jumpToItem);
+                    menuCount++;
+                }
             }
-
-            actionsMenu.addView(btnSave);
-            actionsMenu.addView(btnErase);
-            actionsMenu.addView(btnPen);
-            menuCount+=3;
         }
 
-        if(pdfView!=null&&pdfView.getPageCount()>5) {
-            actionsMenu.addView(jumpToItem);
-            menuCount++;
-        }
 
         int width = outMetrics.widthPixels;
 
@@ -1359,6 +1478,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if(textInputFlag){
             exitTextInputMode();
         }
+        if(meetingWsListener!=null&&isHost){
+            //同步模式
+            meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_ADD,meetingRecordId,id);
+        }
     }
 
     /**
@@ -1370,6 +1493,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         httpUtil.removeHandwriting(id);
         if(pdfView!=null){
             pdfView.invalidate();
+        }
+        if(meetingWsListener!=null&&isHost){
+            //同步模式
+            meetingWsListener.sendMessage(WebSocketMessage.TYPE_HANDWRITING_DELETE,meetingRecordId,id);
         }
     }
 
@@ -1491,7 +1618,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if(progressDialog!=null&&progressDialog.isShowing()){
             progressDialog.dismiss();
         }
-
+        if(meetingWsListener!=null) {
+            meetingWsListener.closeSocket();
+        }
         setResult(1001);
     }
 
