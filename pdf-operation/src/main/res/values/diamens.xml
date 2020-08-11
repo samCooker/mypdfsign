@@ -12,4 +12,7 @@
     <dimen name="pdf_rounded_corner">8dp</dimen>
     <dimen name="pdf_arrow_size">20dp</dimen>
     <dimen name="pdf_msg_tip_size">16sp</dimen>
+
+
+    <dimen name="pdf_dlg_btn_height">50dp</dimen>
 </resources>
