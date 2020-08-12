@@ -61,16 +61,16 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
-import cn.com.chaochuang.pdf_operation.model.CommentFile;
 import cn.com.chaochuang.pdf_operation.model.EntryData;
 import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
+import cn.com.chaochuang.pdf_operation.ui.AttachListFragment;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
+import cn.com.chaochuang.pdf_operation.ui.FlowListFragment;
 import cn.com.chaochuang.pdf_operation.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
 import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
@@ -100,9 +100,9 @@ import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
  * @author Shicx
  */
 
-public class SignPdfView extends AppCompatActivity implements OnDrawListener, OnTapListener, OnLongPressListener, OnLoadCompleteListener {
+public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTapListener, OnLongPressListener, OnLoadCompleteListener {
 
-    private static final String TAG = SignPdfView.class.getSimpleName();
+    private static final String TAG = OaPdfView.class.getSimpleName();
 
     private ProgressDialog progressDialog;
     private JumpToFragment jumpToFragment;
@@ -112,11 +112,26 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private LinearLayout actionsMenu;
     private ImageView arrowLeft,arrowRight;
     private DisplayMetrics outMetrics = new DisplayMetrics();
+    private TextView pageNoView;
 
-    private OkHttpUtil httpUtil;
+    /**
+     * PDF服务器配置
+     * */
+    private OkHttpUtil pdfHttpUtil;
+    private String pdfServerUrl;
+    private String pdfServerToken;
+    /**
+     * OA服务器配置
+     */
+    private OkHttpUtil oaHttpUtil;
+    private String oaServerUrl;
+    private String oaServerToken;
+
     private MyHandler actionHandler;
 
     private PenSettingFragment penSettingFragment;
+    private AttachListFragment attachListFragment;
+    private FlowListFragment flowListFragment;
     private EraseSettingFragment eraseSettingFragment;
 
     /**
@@ -137,8 +152,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
     private String fileId;
     private String filePath;
-    private String serverUrl;
-    private String serverToken;
     private String userId;
     private String userName;
     private int currentPage=0;
@@ -149,17 +162,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     /**
      * 公文相关
      */
+    private String businessId;
     private String flowInstId;
     private String nodeInstId;
-    //多个PDF是否合成一个再打开
-    private boolean multiToOne=false;
-    private Map<String,String> pageMap = new LinkedHashMap<>();
-    private List<CommentFile> commentFileList;
 
-    /**
-     * 是否为公文手写签批（显示提交按钮）
-     */
-    private boolean isDocMode = false;
     private boolean modifyFlag = false;
 
     private boolean readMode = false;
@@ -171,7 +177,12 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     /**
      * 手写批注菜单按钮
      */
-    private AppCompatButton btnSave, btnPen , btnErase , btnEraseSetting, btnSubmit, btnTextInput,btnEditText;
+    private AppCompatButton btnSave, btnPen , btnErase , btnEraseSetting, btnSubmit, btnTextInput,btnEditText,btnPageNo;
+
+    /**
+     * 公文相关按钮
+     */
+    private AppCompatButton btnAttach,btnFlow;
 
     /**
      * 顶部提示栏
@@ -179,6 +190,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private TextView barTextView;
 
     private boolean eraseFlag = false;
+    private boolean showPageNo = false;
     private boolean textInputFlag = false;
     private boolean isDestroy = false;
 
@@ -269,7 +281,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         commentPaint.setPathEffect(new DashPathEffect(new float[]{4, 4}, 0));
 
         //http请求服务
-        httpUtil = new OkHttpUtil(true,serverToken);
+        pdfHttpUtil = new OkHttpUtil(true, pdfServerToken);
+        oaHttpUtil = new OkHttpUtil(true, oaServerToken);
+
 
         //菜单工具栏
         actionsMenu = findViewById(R.id.ll_menu_tool);
@@ -281,6 +295,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         initPenStyle();
         initEraseWidth();
 
+        showPageNo = penSettingData.getBoolean(Constants.KEY_SHOW_PAGE_NO,true);
+
         //加载提示框
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("正在加载");
@@ -288,6 +304,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
         //顶部提示栏
         barTextView = findViewById(R.id.bar_msg_tv);
+        //页码显示
+        pageNoView = findViewById(R.id.tv_page_no);
 
         //dialog
         jumpToFragment = new JumpToFragment();
@@ -365,7 +383,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 ActivityCompat.requestPermissions(this, permissions, REQ_CODE);
             }else{
                 downloadOrOpenFile();
-
             }
         }else{
             downloadOrOpenFile();
@@ -404,24 +421,21 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
         //endregion
 
-        //公文提交按钮
-        if (isDocMode) {
-            btnSubmit = getMenuButton(getResources().getDrawable(R.drawable.ic_submit), "提 交");
-            btnSubmit.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    CommentData handwritingData = getSignBitmapFromSignView();
-                    if (handwritingData != null && handwritingData.getImageBitmap() != null) {
-                        sendMessage(MSG_SHOW_LOADING, "正在保存");
-                        //保存到远程服务器
-                        handwritingData.setSignType(CommentData.TYPE_HANDWRITING);
-                        saveHandwritingData(handwritingData,MSG_SAVE_COMMENT_AND_SUBMIT);
-                    }else{
-                        submitDocAndBack();
-                    }
+        btnSubmit = getMenuButton(getResources().getDrawable(R.drawable.ic_submit), "提 交");
+        btnSubmit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                CommentData handwritingData = getSignBitmapFromSignView();
+                if (handwritingData != null && handwritingData.getImageBitmap() != null) {
+                    sendMessage(MSG_SHOW_LOADING, "正在保存");
+                    //保存到远程服务器
+                    handwritingData.setSignType(CommentData.TYPE_HANDWRITING);
+                    saveHandwritingData(handwritingData,MSG_SAVE_COMMENT_AND_SUBMIT);
+                }else{
+                    submitDocAndBack();
                 }
-            });
-        }
+            }
+        });
 
         //-------以下是手写批注的按钮-------
 
@@ -506,7 +520,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
                 eraseFlag = !eraseFlag;
                 if (eraseFlag) {
-                    Toast.makeText(SignPdfView.this, "已进入橡皮擦模式", Toast.LENGTH_LONG).show();
+                    Toast.makeText(OaPdfView.this, "已进入橡皮擦模式", Toast.LENGTH_LONG).show();
                     btnErase.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_close), null, null);
                     btnErase.setText("退出橡皮擦");
                     actionsMenu.removeAllViews();
@@ -520,7 +534,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     actionsMenu.setLayoutParams(layoutParams);
 
                 } else {
-                    Toast.makeText(SignPdfView.this, "已退出橡皮擦模式", Toast.LENGTH_LONG).show();
+                    Toast.makeText(OaPdfView.this, "已退出橡皮擦模式", Toast.LENGTH_LONG).show();
                     btnErase.setCompoundDrawablesWithIntrinsicBounds(null, getResources().getDrawable(R.drawable.ic_erase), null, null);
                     btnErase.setText("橡皮檫");
                     addActionBtns();
@@ -552,7 +566,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     textView.setEditMode(true);
                     textInputDlg.showFragmentDlg(textView.getCommentData().getTextContent(), userName, getSupportFragmentManager(), "textInputDlg",entryDataList);
                 }else{
-                    Toast.makeText(SignPdfView.this, "请先选择输入文字的位置", Toast.LENGTH_LONG).show();
+                    Toast.makeText(OaPdfView.this, "请先选择输入文字的位置", Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -567,7 +581,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 hideMessageBar();
                 if(textView ==null){
 
-                    textView = new FontTextView(SignPdfView.this);
+                    textView = new FontTextView(OaPdfView.this);
                     textView.setX(txtX-textView.getChopSize());
                     textView.setY(txtY-textView.getChopSize());
                     textView.setTypeface(simsunTypeface);
@@ -609,6 +623,44 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             }
         });
         //endregion
+
+        //region 页码显示
+        btnPageNo = getMenuButton(getResources().getDrawable(R.drawable.ic_shuzhi), showPageNo?"页码关闭":"页码开启");
+        btnPageNo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showPageNo = !showPageNo;
+                if(showPageNo){
+                    pageNoView.setVisibility(View.VISIBLE);
+                    btnPageNo.setText("页码关闭");
+                }else{
+                    pageNoView.setVisibility(View.INVISIBLE);
+                    btnPageNo.setText("页码开启");
+                }
+                SharedPreferences.Editor editor = penSettingData.edit();
+                editor.putBoolean(Constants.KEY_SHOW_PAGE_NO,showPageNo);
+                editor.commit();
+            }
+        });
+        //endregion
+
+        attachListFragment = new AttachListFragment();
+        btnAttach = getMenuButton(getResources().getDrawable(R.drawable.ic_file), "附件");
+        btnAttach.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                attachListFragment.showFragmentDlg(getSupportFragmentManager(),"attachListFragment",oaHttpUtil,oaServerUrl,businessId);
+            }
+        });
+
+        flowListFragment = new FlowListFragment();
+        btnFlow = getMenuButton(getResources().getDrawable(R.drawable.ic_flow), "办理轨迹");
+        btnFlow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                flowListFragment.showFragmentDlg(getSupportFragmentManager(),"flowListFragment",oaHttpUtil,oaServerUrl,businessId);
+            }
+        });
     }
 
     private void intoTextInputMode(){
@@ -674,17 +726,27 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     private void initParams() {
         Intent intent = getIntent();
+
         //文件ID(*必须)
         if (intent.hasExtra(PARAM_FILE_ID)) {
             fileId = intent.getStringExtra(Constants.PARAM_FILE_ID);
         }
+        //OA后端服务URL(*必须)
+        if (intent.hasExtra(Constants.KEY_OA_SERVER_URL)) {
+            oaServerUrl = intent.getStringExtra(Constants.KEY_OA_SERVER_URL);
+        }
+        //OA后端服务token(*必须)
+        if (intent.hasExtra(Constants.KEY_OA_SERVER_TOKEN)) {
+            oaServerToken = intent.getStringExtra(Constants.KEY_OA_SERVER_TOKEN);
+        }
+
         //PDF后端服务URL(*必须)
         if (intent.hasExtra(Constants.KEY_SERVER_URL)) {
-            serverUrl = intent.getStringExtra(Constants.KEY_SERVER_URL);
+            pdfServerUrl = intent.getStringExtra(Constants.KEY_SERVER_URL);
         }
         //PDF后端服务token(*必须)
         if (intent.hasExtra(Constants.KEY_SERVER_TOKEN)) {
-            serverToken = intent.getStringExtra(Constants.KEY_SERVER_TOKEN);
+            pdfServerToken = intent.getStringExtra(Constants.KEY_SERVER_TOKEN);
         }
         //点击保存时是否在服务端生成签批后的PDF文件（默认false）
         if (intent.hasExtra(Constants.KEY_UPDATE_PDF)){
@@ -706,10 +768,6 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if (intent.hasExtra(KEY_CURRENT_PAGE)) {
             currentPage = intent.getIntExtra(KEY_CURRENT_PAGE,0);
         }
-        //是否公文模式，公文模式下显示提交按钮（默认false）
-        if (intent.hasExtra(KEY_IS_DOC_MODE)) {
-            isDocMode = intent.getBooleanExtra(KEY_IS_DOC_MODE,false);
-        }
         //是否只读模式(默认 false)
         if (intent.hasExtra(KEY_IS_READ_MODE)) {
             readMode = intent.getBooleanExtra(KEY_IS_READ_MODE,false);
@@ -730,11 +788,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         if (intent.hasExtra(KEY_FLOW_INST_ID)) {
             flowInstId = intent.getStringExtra(KEY_FLOW_INST_ID);
         }
+        if (intent.hasExtra(KEY_BUSINESS_ID)) {
+            businessId = intent.getStringExtra(KEY_BUSINESS_ID);
+        }
         if (intent.hasExtra(KEY_NODE_INST_ID)) {
             nodeInstId = intent.getStringExtra(KEY_NODE_INST_ID);
-        }
-        if (intent.hasExtra(KEY_MULTI_TO_ONE)) {
-            multiToOne = intent.getBooleanExtra(KEY_MULTI_TO_ONE,false);
         }
 
         modifyFlag=false;
@@ -765,6 +823,9 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 .onPageChange(new OnPageChangeListener() {
                     @Override
                     public void onPageChanged(int page, int pageCount) {
+                        if(pageNoView!=null){
+                            pageNoView.setText((page+1)+" | " +pageCount);
+                        }
                         currentPage = page;
                     }
                 })
@@ -772,6 +833,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 .onLoad(this)
                 //宽度自适应（不可修改，修改后插入手写坐标会发生变化）
                 .pageFitPolicy(FitPolicy.WIDTH).load();
+        if(showPageNo){
+            pageNoView.setVisibility(View.VISIBLE);
+        }else{
+            pageNoView.setVisibility(View.INVISIBLE);
+        }
     }
 
     /**
@@ -818,7 +884,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     public boolean checkCanEdit(float x, float y){
         editComment = null;
-        List<CommentData> handwritingList = this.getHandwritingList();
+        List<CommentData> handwritingList = getHandwritingList();
         for (CommentData data:handwritingList){
             if(data.getPageNo() == pdfView.getCurrentPage()){
                 //只考虑水平滑动的情况
@@ -846,27 +912,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 float zoom = pdfView.getZoom();
                 boolean minFlag = pointX>data.getPx()*pdfView.getDisplayWRadio()*zoom&&pointY>data.getPy()*pdfView.getDisplayHRadio()*zoom;
                 boolean maxFlag = pointX<(data.getPx()+data.getImageWidth())*pdfView.getDisplayWRadio()*zoom&&pointY<(data.getPy()+data.getImageHeight())*pdfView.getDisplayHRadio()*zoom;
-
                 if(minFlag&&maxFlag) {
-                    //是否更新pdf
-                    boolean canDelete=true;
-                    if(commentFileList!=null&&commentFileList.size()>0){
-                        int count = 0;
-                        for(int i=0;i<commentFileList.size();i++){
-                            count += commentFileList.get(i).getTotalPage();
-                            //判断是属于哪个文件
-                            if(data.getPageNo()<count){
-                                //第一个文件属于公文笺，可以删除批注
-                                canDelete = i==0;
-                                break;
-                            }
-                        }
-                    }
-                    if(canDelete) {
-                        editComment = data;
-                        pdfView.invalidate();
-                        return true;
-                    }
+                    editComment = data;
+                    pdfView.invalidate();
+                    return true;
                 }
             }
         }
@@ -893,8 +942,8 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     @Override
     public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage) {
-        if(this.getHandwritingList()!=null) {
-            for (CommentData commentData : this.getHandwritingList()) {
+        if(getHandwritingList()!=null) {
+            for (CommentData commentData : getHandwritingList()) {
                 drawHandwritingPart(canvas, commentData);
             }
         }
@@ -927,6 +976,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             float maxHeight = pdfView.getMaxPageHeight();
             localTranslationY = pdfView.toCurrentScale(maxHeight - size.getHeight()) / 2;
         }
+        canvas.translate(localTranslationX, localTranslationY);
         //原图片大小
         Rect srcRect = new Rect(0, 0, renderedBitmap.getWidth(), renderedBitmap.getHeight());
         //变换后的图片大小
@@ -935,10 +985,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         float zoom = pdfView.getZoom();
         RectF dstRect = new RectF(x*zoom,y*zoom,(x+data.getImageWidth()*pdfView.getDisplayWRadio())*zoom,(y+data.getImageHeight()*pdfView.getDisplayHRadio())*zoom);
 
-        //pdf图片左上角坐标
         float translationX = pdfView.getCurrentXOffset() + localTranslationX;
         float translationY = pdfView.getCurrentYOffset() + localTranslationY;
-        if (currentPage==data.getPageNo()) {
+        if (translationX + dstRect.left >= pdfView.getWidth() || translationX + dstRect.right <= 0 || translationY + dstRect.top >= pdfView.getHeight() || translationY + dstRect.bottom <= 0) {
+            canvas.translate(-localTranslationX, -localTranslationY);
+        }else{
             canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
 
             if (editComment != null && editComment.equals(data)) {
@@ -960,6 +1011,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 }
             }
 
+            canvas.translate(-localTranslationX, -localTranslationY);
         }
     }
 
@@ -993,31 +1045,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         }
 
         CommentData saveBean = new CommentData();
-
-        if(commentFileList!=null&&commentFileList.size()>0){
-            int count = 0;
-            int count2 = 0;
-            for(int i=0;i<commentFileList.size();i++){
-                count += commentFileList.get(i).getTotalPage();
-                //判断是属于哪个文件
-                if(handwritingData.getPageNo()<count){
-                    saveBean.setFileId(commentFileList.get(i).getId());
-                    //不是第一个PDF，则更新源文件
-                    saveBean.setUpdatePdfFlag(i!=0);
-                    //当前页减去前文件的总页数
-                    saveBean.setPageNo(handwritingData.getPageNo()-count2);
-                    break;
-                }
-                count2 +=commentFileList.get(i).getTotalPage();
-            }
-        }else{
-            saveBean.setFileId(fileId);
-            saveBean.setUpdatePdfFlag(updatePdfFlag);
-            saveBean.setPageNo(handwritingData.getPageNo());
-        }
-
+        saveBean.setFileId(fileId);
         saveBean.setFlowInstId(flowInstId);
         saveBean.setNodeInstId(nodeInstId);
+        saveBean.setUpdatePdfFlag(updatePdfFlag);
+        saveBean.setPageNo(handwritingData.getPageNo());
         saveBean.setPx(handwritingData.getPx());
         saveBean.setPy(handwritingData.getPy());
         saveBean.setImageWidth(handwritingData.getImageWidth());
@@ -1031,7 +1063,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         saveBean.setSignType(handwritingData.getSignType());
         String base64Str = ImageTools.bitmapToBase64(handwritingData.getImageBitmap());
         saveBean.setSignContent(base64Str);
-        httpUtil.post(serverUrl + URL_HANDWRITING_SAVE, "jsonData="+JSON.toJSONString(saveBean), new Callback() {
+        pdfHttpUtil.post(pdfServerUrl + URL_HANDWRITING_SAVE, "jsonData="+JSON.toJSONString(saveBean), new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 sendMessage(MSG_RESPONSE_MSG,"操作失败");
@@ -1102,7 +1134,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private void deleteCommentById(final String id){
         if(id!=null){
             sendMessage(MSG_SHOW_LOADING,"正在删除");
-            httpUtil.get(serverUrl + URL_HANDWRITING_DELETE + "?id="+id, new Callback() {
+            pdfHttpUtil.get(pdfServerUrl + URL_HANDWRITING_DELETE + "?id="+id, new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     sendMessage(MSG_RESPONSE_MSG,"操作失败");
@@ -1133,13 +1165,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     private void downloadOrOpenFile(){
         sendMessage(MSG_SHOW_LOADING,"正在下载文件");
-
-        String url = serverUrl + URL_GET_MD5;
-        if(multiToOne){
-            url = serverUrl + URL_GET_ME_MD5;
-        }
-
-        httpUtil.get( url+ "?fileId=" + fileId, new Callback() {
+        pdfHttpUtil.get(pdfServerUrl + URL_GET_MD5 + "?fileId=" + fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
@@ -1154,44 +1180,23 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                 if(response.isSuccessful()&&response.body()!=null) {
                     String data = response.body().string();
                     AppResponse resData = JSON.parseObject(data, AppResponse.class);
-                    if(resData.getData()!=null&&"1".equals(resData.getSuccess())) {
+                    if(resData.getData()!=null) {
                         Map dataMap = JSON.parseObject(resData.getData().toString());
                         if(!dataMap.isEmpty()){
                             File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
                             String fileMd5 = FileUtil.getFileMd5Code(pdfFile);
                             boolean isSame = fileMd5!=null&&fileMd5.equals(dataMap.get("mdfCode"));
-
-                            Object fileListStr =  dataMap.get("fileDataList");
-                            if(fileListStr!=null){
-                                commentFileList = JSON.parseArray(fileListStr.toString(), CommentFile.class);
-                               if(commentFileList.size()>0){
-                                   int count = 0;
-                                   for (int i = 0; i < commentFileList.size(); i++) {
-                                       CommentFile commentFile = commentFileList.get(i);
-                                       commentFile.setIndex(i);
-                                       if (commentFile.getTotalPage() != null) {
-                                           for (int page = 0; page < commentFile.getTotalPage(); page++) {
-                                               pageMap.put(count + "", commentFile.getId());
-                                               count++;
-                                           }
-                                       }
-                                   }
-                               }
-                            }
-
                             if(pdfFile.exists()&&isSame){
                                 filePath = pdfFile.getAbsolutePath();
                                 findHandwritingData();
                             }else{
                                 //下载文件
-                                downloadFile(pdfFile,"1".equals(dataMap.get("mergeResult")));
+                                downloadFile(pdfFile);
                             }
                         }else{
                             sendMessage(MSG_DOWNLOAD_ERROR,"文件打开失败");
                         }
 
-                    }else{
-                        sendMessage(MSG_DOWNLOAD_ERROR,resData.getMessage());
                     }
                 }else{
                     sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
@@ -1200,17 +1205,12 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         });
     }
 
-    private void downloadFile(final File file,boolean dwnMergePdf){
+    private void downloadFile(final File file){
         if(!file.getParentFile().exists()){
             file.getParentFile().mkdirs();
         }
         OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).build();
-        String url = serverUrl + URL_DOWNLOAD_FILE;
-        if(dwnMergePdf){
-            url = serverUrl + URL_DOWNLOAD_ME_FILE;
-        }
-
-        Request request = new Request.Builder().url(url+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME,serverToken).build();
+        Request request = new Request.Builder().url(pdfServerUrl +URL_DOWNLOAD_FILE+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME, pdfServerToken).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -1229,7 +1229,11 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     }
                     if (response.isSuccessful()) {
                         responseBody = response.body();
-                        long total = responseBody.contentLength();
+                        long total = -1;
+                        String lengthStr = response.header("content-length");
+                        if(lengthStr!=null){
+                            total = Long.parseLong(lengthStr);
+                        }
                         bis = new BufferedInputStream(responseBody.byteStream());
                         fos = new FileOutputStream(file);
                         byte[] bytes = new byte[1024 * 8];
@@ -1240,8 +1244,10 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                             fos.flush();
                             current += len;
                             //计算进度
-                            int progress = (int) (100 * current / total);
-                            Log.d(TAG,"下载进度："+progress);
+                            if(total>0) {
+                                int progress = (int) (100 * current / total);
+                                sendMessage(MSG_DOWNLOAD_PROGRESS, progress + "%");
+                            }
                         }
                         sendMessage(MSG_HIDE_LOADING,null);
                         filePath = file.getAbsolutePath();
@@ -1279,7 +1285,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     private void findPdfHandwriting(){
         //查询批注数据
         sendMessage(MSG_SHOW_LOADING,"正在打开文件");
-        httpUtil.get(serverUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
+        pdfHttpUtil.get(pdfServerUrl + Constants.URL_HANDWRITING_LIST+"?fileId="+fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 sendMessage(MSG_RESPONSE_MSG,"请求错误");
@@ -1333,6 +1339,15 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
             menuCount++;
         }
 
+        actionsMenu.addView(btnPageNo);
+        menuCount++;
+
+        actionsMenu.addView(btnAttach);
+        menuCount++;
+
+        actionsMenu.addView(btnFlow);
+        menuCount++;
+
         int width = outMetrics.widthPixels;
 
         if(300*menuCount>width){
@@ -1371,7 +1386,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
 
     private void httpResponseMsg(String msg){
         hideProgressDialog();
-        Toast.makeText(SignPdfView.this,msg,Toast.LENGTH_LONG).show();
+        Toast.makeText(OaPdfView.this,msg,Toast.LENGTH_LONG).show();
     }
 
     private void refreshPdfView(){
@@ -1381,7 +1396,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
     }
 
     private void showConfirmDialog(String msg){
-        new AlertView("提示", msg, null, new String[]{"确定"}, null, SignPdfView.this, AlertView.Style.Alert, null).setCancelable(true).show();
+        new AlertView("提示", msg, null, new String[]{"确定"}, null, OaPdfView.this, AlertView.Style.Alert, null).setCancelable(true).show();
     }
 
     /**
@@ -1401,7 +1416,7 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
         //刷新页面
         pdfView.invalidate();
         drawPenView.clearView();
-        Toast.makeText(SignPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
+        Toast.makeText(OaPdfView.this,"保存成功",Toast.LENGTH_LONG).show();
 
         if(textInputFlag){
             exitTextInputMode();
@@ -1440,15 +1455,15 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
      */
     private static class MyHandler extends Handler{
 
-        private final WeakReference<SignPdfView> signPdfViewRef;
+        private final WeakReference<OaPdfView> signPdfViewRef;
 
-        public MyHandler(SignPdfView signPdfView) {
+        public MyHandler(OaPdfView signPdfView) {
             signPdfViewRef = new WeakReference<>(signPdfView);
         }
 
         @Override
         public void handleMessage(Message msg) {
-            SignPdfView signPdfView = signPdfViewRef.get();
+            OaPdfView signPdfView = signPdfViewRef.get();
             if(signPdfView.isDestroy){
                 return;
             }
@@ -1512,8 +1527,17 @@ public class SignPdfView extends AppCompatActivity implements OnDrawListener, On
                     signPdfView.hideProgressDialog();
                     signPdfView.intoTextInputMode();
                     break;
+                case MSG_DOWNLOAD_PROGRESS:
+                    signPdfView.showDownloadProgress(dataObj.toString());
+                    break;
                 default:
             }
+        }
+    }
+
+    private void showDownloadProgress(String progress){
+        if(progressDialog!=null){
+            progressDialog.setMessage("正在下载： "+progress);
         }
     }
 

@@ -12,6 +12,12 @@ public class Constants {
     public static final SimpleDateFormat DATA_FORMAT1 = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA);
 
     public static final String HEADER_TOKEN_NAME = "token";
+    public static final String HEADER_AUTH_NAME = "Authorization";
+    public static final String HEADER_IS_JWT = "isJwt";
+
+    //使用OaPdfView打开需要的相关参数
+    public static final String KEY_OA_SERVER_URL = "oaServerUrl";
+    public static final String KEY_OA_SERVER_TOKEN = "oaServerToken";
 
     //PDF后端服务URL(*必须)
     public static final String KEY_SERVER_URL = "serverUrl";
@@ -39,6 +45,7 @@ public class Constants {
     public static final String KEY_ENTRY_LIST = "entryList";
 
     //--公文手写签批相关--
+    public static final String KEY_BUSINESS_ID = "businessId";
     public static final String KEY_FLOW_INST_ID = "flowInstId";
     public static final String KEY_NODE_INST_ID = "nodeInstId";
     //把多个PDF合成，再打开合成的PDF
@@ -50,6 +57,8 @@ public class Constants {
     //是否主持人
     public static final String KEY_IS_HOST = "isHost";
 
+    public static final String KEY_SHOW_PAGE_NO = "showPageNo";
+
     //-- 后端服务URL --
     public static final String URL_HANDWRITING_LIST = "comment/list.mo";
     public static final String URL_HANDWRITING_SAVE = "comment/save.mo";
@@ -60,6 +69,11 @@ public class Constants {
     public static final String URL_GET_ME_MD5 = "comment/getmemdf.mo";
     public static final String URL_DOWNLOAD_FILE = "comment/download.mo";
     public static final String URL_DOWNLOAD_ME_FILE = "comment/downloadme.mo";
+
+    //--OA服务端
+    public static final String URL_DOC_ATTACH_LIST = "mobile/doc/attachlist.mo";
+    public static final String URL_DOC_GET_MD5 = "mobile/attach/getmdf.mo";
+    public static final String URL_DOC_DOWNLOAD_FILE = "mobile/attach/download.mo";
 
     //-- handler 状态码 --
     public static final int MSG_TOAST = 0;
@@ -76,4 +90,6 @@ public class Constants {
     public static final int MSG_DOWNLOAD_ERROR = 10;
     public static final int MSG_CHANGE_LOADING = 11;
     public static final int MSG_FONT_DOWNLOAD_SUCCESS = 12;
+    public static final int MSG_RESPONSE_SUCCESS = 13;
+    public static final int MSG_DOWNLOAD_PROGRESS = 14;
 }

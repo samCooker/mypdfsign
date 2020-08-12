@@ -4,5 +4,7 @@
     <application android:supportsRtl="true">
         <activity android:name=".SignPdfView" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         </activity>
+        <activity android:name=".OaPdfView" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        </activity>
     </application>
 </manifest>
