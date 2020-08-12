@@ -9,8 +9,10 @@
 package cn.com.chaochuang.pdf_operation.model;
 
 
-public class AttachData {
+public class DocAttachData {
 
+    private String            id;
+    private String            TagName;
     /** 附件保存名 */
     private String            saveName;
 
@@ -29,6 +31,21 @@ public class AttachData {
     /** 附件类型 */
     private String            attachType;
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTagName() {
+        return TagName;
+    }
+
+    public void setTagName(String tagName) {
+        TagName = tagName;
+    }
 
     public String getSaveName() {
         return saveName;

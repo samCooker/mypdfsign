@@ -46,6 +46,14 @@ public class OkHttpUtil {
         client = new OkHttpClient().newBuilder().readTimeout(READ_TIMEOUT, TimeUnit.SECONDS).writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS).connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS).addInterceptor(new DecodeInterceptor()).build();
     }
 
+    public Boolean getEncoding() {
+        return isEncoding;
+    }
+
+    public String getServerToken() {
+        return serverToken;
+    }
+
     /**
      *
      * @param url

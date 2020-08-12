@@ -70,6 +70,7 @@ import cn.com.chaochuang.pdf_operation.model.EntryData;
 import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
 import cn.com.chaochuang.pdf_operation.ui.AttachListFragment;
 import cn.com.chaochuang.pdf_operation.ui.EraseSettingFragment;
+import cn.com.chaochuang.pdf_operation.ui.FlowListFragment;
 import cn.com.chaochuang.pdf_operation.ui.FontTextView;
 import cn.com.chaochuang.pdf_operation.ui.JumpToFragment;
 import cn.com.chaochuang.pdf_operation.ui.PenSettingFragment;
@@ -91,33 +92,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-import static cn.com.chaochuang.pdf_operation.utils.Constants.DATA_FORMAT1;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_CURRENT_PAGE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_ENTRY_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_FLOW_INST_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_HIDE_ANNOT;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_IS_READ_MODE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.KEY_NODE_INST_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_CHANGE_LOADING;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DEL_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_DOWNLOAD_ERROR;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_FIND_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_FONT_DOWNLOAD_SUCCESS;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_HIDE_LOADING;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_PDF_PAGE_CHANGE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_REFRESH_PDF_VIEW;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_RESPONSE_MSG;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_AND_SUBMIT;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SAVE_COMMENT_LIST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_CONFIRM_DLG;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_SHOW_LOADING;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.MSG_TOAST;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_FILE_ID;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.PARAM_USER_NAME;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_DOWNLOAD_FILE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_GET_MD5;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_DELETE;
-import static cn.com.chaochuang.pdf_operation.utils.Constants.URL_HANDWRITING_SAVE;
+import static cn.com.chaochuang.pdf_operation.utils.Constants.*;
 
 /**
  * 2019-4-23
@@ -156,6 +131,7 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
 
     private PenSettingFragment penSettingFragment;
     private AttachListFragment attachListFragment;
+    private FlowListFragment flowListFragment;
     private EraseSettingFragment eraseSettingFragment;
 
     /**
@@ -186,6 +162,7 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
     /**
      * 公文相关
      */
+    private String businessId;
     private String flowInstId;
     private String nodeInstId;
 
@@ -329,11 +306,6 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         barTextView = findViewById(R.id.bar_msg_tv);
         //页码显示
         pageNoView = findViewById(R.id.tv_page_no);
-        if(showPageNo){
-            pageNoView.setVisibility(View.VISIBLE);
-        }else{
-            pageNoView.setVisibility(View.INVISIBLE);
-        }
 
         //dialog
         jumpToFragment = new JumpToFragment();
@@ -658,7 +630,6 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
             @Override
             public void onClick(View v) {
                 showPageNo = !showPageNo;
-
                 if(showPageNo){
                     pageNoView.setVisibility(View.VISIBLE);
                     btnPageNo.setText("页码关闭");
@@ -666,6 +637,9 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                     pageNoView.setVisibility(View.INVISIBLE);
                     btnPageNo.setText("页码开启");
                 }
+                SharedPreferences.Editor editor = penSettingData.edit();
+                editor.putBoolean(Constants.KEY_SHOW_PAGE_NO,showPageNo);
+                editor.commit();
             }
         });
         //endregion
@@ -675,7 +649,16 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         btnAttach.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                attachListFragment.showFragmentDlg(getSupportFragmentManager(),"attachListFragment",oaHttpUtil,oaServerUrl);
+                attachListFragment.showFragmentDlg(getSupportFragmentManager(),"attachListFragment",oaHttpUtil,oaServerUrl,businessId);
+            }
+        });
+
+        flowListFragment = new FlowListFragment();
+        btnFlow = getMenuButton(getResources().getDrawable(R.drawable.ic_flow), "办理轨迹");
+        btnFlow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                flowListFragment.showFragmentDlg(getSupportFragmentManager(),"flowListFragment",oaHttpUtil,oaServerUrl,businessId);
             }
         });
     }
@@ -805,6 +788,9 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         if (intent.hasExtra(KEY_FLOW_INST_ID)) {
             flowInstId = intent.getStringExtra(KEY_FLOW_INST_ID);
         }
+        if (intent.hasExtra(KEY_BUSINESS_ID)) {
+            businessId = intent.getStringExtra(KEY_BUSINESS_ID);
+        }
         if (intent.hasExtra(KEY_NODE_INST_ID)) {
             nodeInstId = intent.getStringExtra(KEY_NODE_INST_ID);
         }
@@ -847,6 +833,11 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                 .onLoad(this)
                 //宽度自适应（不可修改，修改后插入手写坐标会发生变化）
                 .pageFitPolicy(FitPolicy.WIDTH).load();
+        if(showPageNo){
+            pageNoView.setVisibility(View.VISIBLE);
+        }else{
+            pageNoView.setVisibility(View.INVISIBLE);
+        }
     }
 
     /**
@@ -1238,7 +1229,11 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                     }
                     if (response.isSuccessful()) {
                         responseBody = response.body();
-                        long total = responseBody.contentLength();
+                        long total = -1;
+                        String lengthStr = response.header("content-length");
+                        if(lengthStr!=null){
+                            total = Long.parseLong(lengthStr);
+                        }
                         bis = new BufferedInputStream(responseBody.byteStream());
                         fos = new FileOutputStream(file);
                         byte[] bytes = new byte[1024 * 8];
@@ -1249,8 +1244,10 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                             fos.flush();
                             current += len;
                             //计算进度
-                            int progress = (int) (100 * current / total);
-                            Log.d(TAG,"下载进度："+progress);
+                            if(total>0) {
+                                int progress = (int) (100 * current / total);
+                                sendMessage(MSG_DOWNLOAD_PROGRESS, progress + "%");
+                            }
                         }
                         sendMessage(MSG_HIDE_LOADING,null);
                         filePath = file.getAbsolutePath();
@@ -1346,6 +1343,9 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         menuCount++;
 
         actionsMenu.addView(btnAttach);
+        menuCount++;
+
+        actionsMenu.addView(btnFlow);
         menuCount++;
 
         int width = outMetrics.widthPixels;
@@ -1527,8 +1527,17 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                     signPdfView.hideProgressDialog();
                     signPdfView.intoTextInputMode();
                     break;
+                case MSG_DOWNLOAD_PROGRESS:
+                    signPdfView.showDownloadProgress(dataObj.toString());
+                    break;
                 default:
             }
+        }
+    }
+
+    private void showDownloadProgress(String progress){
+        if(progressDialog!=null){
+            progressDialog.setMessage("正在下载： "+progress);
         }
     }
 

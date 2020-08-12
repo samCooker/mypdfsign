@@ -45,6 +45,7 @@ public class Constants {
     public static final String KEY_ENTRY_LIST = "entryList";
 
     //--公文手写签批相关--
+    public static final String KEY_BUSINESS_ID = "businessId";
     public static final String KEY_FLOW_INST_ID = "flowInstId";
     public static final String KEY_NODE_INST_ID = "nodeInstId";
 
@@ -66,6 +67,8 @@ public class Constants {
 
     //--OA服务端
     public static final String URL_DOC_ATTACH_LIST = "mobile/doc/attachlist.mo";
+    public static final String URL_DOC_GET_MD5 = "mobile/attach/getmdf.mo";
+    public static final String URL_DOC_DOWNLOAD_FILE = "mobile/attach/download.mo";
 
     //-- handler 状态码 --
     public static final int MSG_TOAST = 0;
@@ -83,4 +86,5 @@ public class Constants {
     public static final int MSG_CHANGE_LOADING = 11;
     public static final int MSG_FONT_DOWNLOAD_SUCCESS = 12;
     public static final int MSG_RESPONSE_SUCCESS = 13;
+    public static final int MSG_DOWNLOAD_PROGRESS = 14;
 }

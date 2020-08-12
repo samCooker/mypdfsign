@@ -25,4 +25,8 @@
 
     <color name="pdf_tip_bg">#CDCDCD</color>
     <color name="pdf_text_comment">#000000</color>
+
+    <color name="flow_no">#ffbd17</color>
+    <color name="flow_node">#44cc00</color>
+    <color name="flow_node_active">#11c1f3</color>
 </resources>

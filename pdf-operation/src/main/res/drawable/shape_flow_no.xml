@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <solid android:color="@color/flow_no"/>
+
+    <corners android:radius="@dimen/doc_flow_no"/>
+
+    <stroke android:width="0dp"/>
+
+</shape>
