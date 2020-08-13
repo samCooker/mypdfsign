@@ -98,7 +98,7 @@ public class PDFView extends RelativeLayout {
 
     public static final float DEFAULT_MAX_SCALE = 3.0f;
     public static final float DEFAULT_MID_SCALE = 1.5f;
-    public static final float DEFAULT_MIN_SCALE = 1f;
+    public static final float DEFAULT_MIN_SCALE = 0.5f;
 
     private float minZoom = DEFAULT_MIN_SCALE;
     private float midZoom = DEFAULT_MID_SCALE;

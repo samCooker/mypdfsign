@@ -61,11 +61,13 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import cn.com.chaochuang.pdf_operation.model.AppResponse;
+import cn.com.chaochuang.pdf_operation.model.CommentFile;
 import cn.com.chaochuang.pdf_operation.model.EntryData;
 import cn.com.chaochuang.pdf_operation.model.PdfCommentBean;
 import cn.com.chaochuang.pdf_operation.ui.AttachListFragment;
@@ -165,6 +167,10 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
     private String businessId;
     private String flowInstId;
     private String nodeInstId;
+    //多个PDF是否合成一个再打开
+    private boolean multiToOne=false;
+    private Map<String,String> pageMap = new LinkedHashMap<>();
+    private List<CommentFile> commentFileList;
 
     private boolean modifyFlag = false;
 
@@ -794,6 +800,9 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         if (intent.hasExtra(KEY_NODE_INST_ID)) {
             nodeInstId = intent.getStringExtra(KEY_NODE_INST_ID);
         }
+        if (intent.hasExtra(KEY_MULTI_TO_ONE)) {
+            multiToOne = intent.getBooleanExtra(KEY_MULTI_TO_ONE,false);
+        }
 
         modifyFlag=false;
     }
@@ -837,6 +846,26 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
             pageNoView.setVisibility(View.VISIBLE);
         }else{
             pageNoView.setVisibility(View.INVISIBLE);
+        }
+
+        if(oaServerUrl!=null&&!"".equals(oaServerUrl.trim())){
+            oaHttpUtil.get(oaServerUrl + "mobile/doc/entrylist.mo", new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if(response.isSuccessful()&&response.body()!=null) {
+                        String data = response.body().string();
+                        AppResponse resData = JSON.parseObject(data, AppResponse.class);
+                        if(resData.getData()!=null&&!"".equals(resData.getData().toString().trim())) {
+                            entryDataList = JSON.parseArray(resData.getData().toString(), EntryData.class);
+                        }
+                    }
+                }
+            });
         }
     }
 
@@ -884,7 +913,7 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
      */
     public boolean checkCanEdit(float x, float y){
         editComment = null;
-        List<CommentData> handwritingList = getHandwritingList();
+        List<CommentData> handwritingList = this.getHandwritingList();
         for (CommentData data:handwritingList){
             if(data.getPageNo() == pdfView.getCurrentPage()){
                 //只考虑水平滑动的情况
@@ -912,10 +941,27 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                 float zoom = pdfView.getZoom();
                 boolean minFlag = pointX>data.getPx()*pdfView.getDisplayWRadio()*zoom&&pointY>data.getPy()*pdfView.getDisplayHRadio()*zoom;
                 boolean maxFlag = pointX<(data.getPx()+data.getImageWidth())*pdfView.getDisplayWRadio()*zoom&&pointY<(data.getPy()+data.getImageHeight())*pdfView.getDisplayHRadio()*zoom;
+
                 if(minFlag&&maxFlag) {
-                    editComment = data;
-                    pdfView.invalidate();
-                    return true;
+                    //是否更新pdf
+                    boolean canDelete=true;
+                    if(commentFileList!=null&&commentFileList.size()>0){
+                        int count = 0;
+                        for(int i=0;i<commentFileList.size();i++){
+                            count += commentFileList.get(i).getTotalPage();
+                            //判断是属于哪个文件
+                            if(data.getPageNo()<count){
+                                //第一个文件属于公文笺，可以删除批注
+                                canDelete = i==0;
+                                break;
+                            }
+                        }
+                    }
+                    if(canDelete) {
+                        editComment = data;
+                        pdfView.invalidate();
+                        return true;
+                    }
                 }
             }
         }
@@ -976,7 +1022,6 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
             float maxHeight = pdfView.getMaxPageHeight();
             localTranslationY = pdfView.toCurrentScale(maxHeight - size.getHeight()) / 2;
         }
-        canvas.translate(localTranslationX, localTranslationY);
         //原图片大小
         Rect srcRect = new Rect(0, 0, renderedBitmap.getWidth(), renderedBitmap.getHeight());
         //变换后的图片大小
@@ -985,11 +1030,10 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         float zoom = pdfView.getZoom();
         RectF dstRect = new RectF(x*zoom,y*zoom,(x+data.getImageWidth()*pdfView.getDisplayWRadio())*zoom,(y+data.getImageHeight()*pdfView.getDisplayHRadio())*zoom);
 
+        //pdf图片左上角坐标
         float translationX = pdfView.getCurrentXOffset() + localTranslationX;
         float translationY = pdfView.getCurrentYOffset() + localTranslationY;
-        if (translationX + dstRect.left >= pdfView.getWidth() || translationX + dstRect.right <= 0 || translationY + dstRect.top >= pdfView.getHeight() || translationY + dstRect.bottom <= 0) {
-            canvas.translate(-localTranslationX, -localTranslationY);
-        }else{
+        if (currentPage==data.getPageNo()) {
             canvas.drawBitmap(renderedBitmap, srcRect, dstRect, paint);
 
             if (editComment != null && editComment.equals(data)) {
@@ -1011,7 +1055,6 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                 }
             }
 
-            canvas.translate(-localTranslationX, -localTranslationY);
         }
     }
 
@@ -1045,11 +1088,31 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         }
 
         CommentData saveBean = new CommentData();
-        saveBean.setFileId(fileId);
+
+        if(commentFileList!=null&&commentFileList.size()>0){
+            int count = 0;
+            int count2 = 0;
+            for(int i=0;i<commentFileList.size();i++){
+                count += commentFileList.get(i).getTotalPage();
+                //判断是属于哪个文件
+                if(handwritingData.getPageNo()<count){
+                    saveBean.setFileId(commentFileList.get(i).getId());
+                    //不是第一个PDF，则更新源文件
+                    saveBean.setUpdatePdfFlag(i!=0);
+                    //当前页减去前文件的总页数
+                    saveBean.setPageNo(handwritingData.getPageNo()-count2);
+                    break;
+                }
+                count2 +=commentFileList.get(i).getTotalPage();
+            }
+        }else{
+            saveBean.setFileId(fileId);
+            saveBean.setUpdatePdfFlag(updatePdfFlag);
+            saveBean.setPageNo(handwritingData.getPageNo());
+        }
+
         saveBean.setFlowInstId(flowInstId);
         saveBean.setNodeInstId(nodeInstId);
-        saveBean.setUpdatePdfFlag(updatePdfFlag);
-        saveBean.setPageNo(handwritingData.getPageNo());
         saveBean.setPx(handwritingData.getPx());
         saveBean.setPy(handwritingData.getPy());
         saveBean.setImageWidth(handwritingData.getImageWidth());
@@ -1165,7 +1228,13 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
      */
     private void downloadOrOpenFile(){
         sendMessage(MSG_SHOW_LOADING,"正在下载文件");
-        pdfHttpUtil.get(pdfServerUrl + URL_GET_MD5 + "?fileId=" + fileId, new Callback() {
+
+        String url = pdfServerUrl + URL_GET_MD5;
+        if(multiToOne){
+            url = pdfServerUrl + URL_GET_ME_MD5;
+        }
+
+        pdfHttpUtil.get(url + "?fileId=" + fileId, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 sendMessage(MSG_DOWNLOAD_ERROR,"文件下载失败，请尝试重新打开");
@@ -1186,12 +1255,30 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                             File pdfFile = new File(pdfRoot,dataMap.get("mdfCode")+"/"+dataMap.get("fileName"));
                             String fileMd5 = FileUtil.getFileMd5Code(pdfFile);
                             boolean isSame = fileMd5!=null&&fileMd5.equals(dataMap.get("mdfCode"));
+                            Object fileListStr =  dataMap.get("fileDataList");
+                            if(fileListStr!=null){
+                                commentFileList = JSON.parseArray(fileListStr.toString(), CommentFile.class);
+                                if(commentFileList.size()>0){
+                                    int count = 0;
+                                    for (int i = 0; i < commentFileList.size(); i++) {
+                                        CommentFile commentFile = commentFileList.get(i);
+                                        commentFile.setIndex(i);
+                                        if (commentFile.getTotalPage() != null) {
+                                            for (int page = 0; page < commentFile.getTotalPage(); page++) {
+                                                pageMap.put(count + "", commentFile.getId());
+                                                count++;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             if(pdfFile.exists()&&isSame){
                                 filePath = pdfFile.getAbsolutePath();
                                 findHandwritingData();
                             }else{
                                 //下载文件
-                                downloadFile(pdfFile);
+                                downloadFile(pdfFile,"1".equals(dataMap.get("mergeResult")));
                             }
                         }else{
                             sendMessage(MSG_DOWNLOAD_ERROR,"文件打开失败");
@@ -1205,12 +1292,17 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
         });
     }
 
-    private void downloadFile(final File file){
+    private void downloadFile(final File file,boolean dwnMergePdf){
         if(!file.getParentFile().exists()){
             file.getParentFile().mkdirs();
         }
         OkHttpClient httpClient = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).build();
-        Request request = new Request.Builder().url(pdfServerUrl +URL_DOWNLOAD_FILE+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME, pdfServerToken).build();
+        String url = pdfServerUrl + URL_DOWNLOAD_FILE;
+        if(dwnMergePdf){
+            url = pdfServerUrl + URL_DOWNLOAD_ME_FILE;
+        }
+
+        Request request = new Request.Builder().url(url+"?fileId=" + fileId).header(Constants.HEADER_TOKEN_NAME,pdfServerToken).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -1229,11 +1321,7 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                     }
                     if (response.isSuccessful()) {
                         responseBody = response.body();
-                        long total = -1;
-                        String lengthStr = response.header("content-length");
-                        if(lengthStr!=null){
-                            total = Long.parseLong(lengthStr);
-                        }
+                        long total = responseBody.contentLength();
                         bis = new BufferedInputStream(responseBody.byteStream());
                         fos = new FileOutputStream(file);
                         byte[] bytes = new byte[1024 * 8];
@@ -1244,10 +1332,8 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
                             fos.flush();
                             current += len;
                             //计算进度
-                            if(total>0) {
-                                int progress = (int) (100 * current / total);
-                                sendMessage(MSG_DOWNLOAD_PROGRESS, progress + "%");
-                            }
+                            int progress = (int) (100 * current / total);
+                            Log.d(TAG,"下载进度："+progress);
                         }
                         sendMessage(MSG_HIDE_LOADING,null);
                         filePath = file.getAbsolutePath();
@@ -1326,27 +1412,32 @@ public class OaPdfView extends AppCompatActivity implements OnDrawListener, OnTa
 
             if(!hideTextBtn) {
                 actionsMenu.addView(btnTextInput);
+                menuCount++;
             }
 
             actionsMenu.addView(btnSave);
+            menuCount++;
             actionsMenu.addView(btnErase);
-            actionsMenu.addView(btnPen);
-            menuCount+=3;
-        }
-
-        if(pdfView!=null&&pdfView.getPageCount()>5) {
-            actionsMenu.addView(jumpToItem);
             menuCount++;
         }
 
-        actionsMenu.addView(btnPageNo);
-        menuCount++;
 
         actionsMenu.addView(btnAttach);
         menuCount++;
 
         actionsMenu.addView(btnFlow);
         menuCount++;
+
+        actionsMenu.addView(btnPageNo);
+        menuCount++;
+
+        actionsMenu.addView(btnPen);
+        menuCount++;
+
+        if(pdfView!=null&&pdfView.getPageCount()>1) {
+            actionsMenu.addView(jumpToItem);
+            menuCount++;
+        }
 
         int width = outMetrics.widthPixels;
 

@@ -204,10 +204,14 @@ public class FontTextView extends AppCompatTextView {
     public void setTextAndUserName(String text, String userName) {
         commentData.setTextContent(text);
         commentData.setSignTime(new Date());
-        userNameSign = userName + " " + Constants.DATA_FORMAT1.format(commentData.getSignTime());
-        //末尾加上回车
-        if(text!=null) {
-            text += "\n";
+        if(userName!=null) {
+            userNameSign = userName + " " + Constants.DATA_FORMAT1.format(commentData.getSignTime());
+            //末尾加上回车
+            if (text != null) {
+                text += "\n";
+            }
+        }else{
+            userNameSign = "";
         }
         setText(text);
 

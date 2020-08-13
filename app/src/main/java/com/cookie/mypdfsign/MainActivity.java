@@ -19,19 +19,21 @@ public class MainActivity extends Activity {
 //        Intent intent = new Intent(this,SignPdfView.class);
 
         intent.putExtra(Constants.KEY_OA_SERVER_URL, "http://192.168.31.60:48080/gaoxinoa/");
-        intent.putExtra(Constants.KEY_OA_SERVER_TOKEN, "eyJhbGciOiJIUzUxMiJ9.eyJ1aWQiOiIxIiwiZXhwIjoxNTk3MTU5MzE5fQ.xEARu9voRmFxOUunVMvIIGZUtvPLWqaDu5jqa_N85MR2K2f4_sVrkhfzo9I49l7ib-mS5BlUpuTNOmYr6vopmQ");
+        intent.putExtra(Constants.KEY_OA_SERVER_TOKEN, "eyJhbGciOiJIUzUxMiJ9.eyJ1aWQiOiIxMTUxIiwiZXhwIjoxNTk3MzI1MzEzfQ.-mB-unKFKqEcZRjZOcmG984CHFQ6p1abBmHpMr7mz-gqcTdVlEKlM0Rb7oShJz1CTen1AV1P4DNETuAHnsGkfw");
+        intent.putExtra(Constants.KEY_BUSINESS_ID, "40289fbc73e567b00173e568f7c10001");
 
 
+        intent.putExtra(Constants.KEY_MULTI_TO_ONE, true);
         intent.putExtra(Constants.PARAM_USER_ID, "1");
         intent.putExtra(Constants.PARAM_USER_NAME, "测试人员");
-        intent.putExtra(Constants.PARAM_FILE_ID, "40289fbc73d6436d0173d7151c470000");
+        intent.putExtra(Constants.PARAM_FILE_ID, "40289fbc73e559c40173e56ed5750000");
         intent.putExtra(Constants.KEY_SERVER_URL, "http://192.168.31.60:8089/pdf_handwriting/");
         intent.putExtra(Constants.KEY_WEB_SOCKET_URL, "ws://192.168.31.60:8089/pdf_handwriting/meeting/ws/");
 ////        intent.putExtra(Constants.KEY_MEETING_REOCRD_ID, "1");
 //        intent.putExtra(Constants.KEY_IS_HOST, true);
 //        intent.putExtra(Constants.KEY_IS_DOC_MODE, true);
 //        intent.putExtra(Constants.KEY_CURRENT_PAGE, 1);
-        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxIiwidW5hbWUiOiLns7vnu5_nrqHnkIblkZgiLCJleHAiOjE1OTcyMDI1MTl9.LvfWSXbLMVjRPd3AhhzKBWeg1MiISmGY0aKNAYCL0ms");
+        intent.putExtra(Constants.KEY_SERVER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiIxMTUxIiwidW5hbWUiOiLlvKDkuIkiLCJleHAiOjE1OTczNjg1MTN9.FsfbpcwYwvKDHRv1R1_eomWw_pl-SVVOjLzLWUBw-R4");
         startActivityForResult(intent,1001);
 
     }
